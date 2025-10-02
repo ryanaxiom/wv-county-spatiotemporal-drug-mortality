@@ -225,17 +225,18 @@ While this pipeline automatically selects the model with the lowest WAIC, **this
 
 ### Directories Created
 
-outputs/models/ - Fitted model objects (.rds files)
-outputs/plots/ - Visualizations (.png files)
-outputs/diagnostics/ - Performance summaries (.csv and .txt files)
-outputs/data/ - Processed data objects
+`outputs/data/` - Processed data objects
+`outputs/diagnostics` - comprehensive analysis report, executive summary, and 
+`outputs/models/` - Fitted model objects (.rds files)
+`outputs/plots/` - Visualizations (.png files)
+`outputs/models/` - Performance and phase summaries (.csv and .txt files)
 
 ### Key Output Files
 
-phase6_executive_dashboard.png - Main results summary
-comprehensive_analysis_report_[opioid/stimulant].txt - Detailed report
-phase6_all_models_comparison_[opioid/stimulant].csv - Model metrics
-State-level prediction plots with credible intervals
+`phase6_executive_dashboard.png` - Main results summary
+`comprehensive_analysis_report_[opioid/stimulant].txt` - Detailed report
+`phase6_all_models_comparison_[opioid/stimulant].csv` - Model metrics
+State-level and county-level prediction plots with respective credible intervals
 
 ## Citation
 Hansen, Ryan. (2025). West Virginia County-Level Spatiotemporal Drug 
