@@ -41,7 +41,7 @@ The analysis demonstrates clear improvements at each modeling stage:
 - **Baseline → Single Component**: 28% MAE reduction
 - **Single Component → Separable**: 20.6% MAE reduction  
 - **Separable → Interaction**: 1.7% MAE reduction
-- **Overall (Baseline → Best)**: 44% MAE reduction
+- **Overall (Baseline → Best)**: 50.3% MAE reduction
 - **Counties with improved predictions (Separable → Interaction):** 52.8%
 - **Best interaction model:** adjacency_ar1_period (WAIC: 10935.3)  
 - **Best separable model:** adjacency_ar1 (WAIC: 11014.4)
