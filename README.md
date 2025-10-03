@@ -271,8 +271,11 @@ Project Link: https://github.com/ryanaxiom/wv-county-spatiotemporal-drug-mortali
 ## Acknowledgments
 
 West Virginia Department of Health and Human Resources for data access
+
 Mohammad Al-Mamun (mohammad.almamun@hsc.wvu.edu) for data cleaning and provision
+
 Thanks to West Virginia Clinical and Translational Science Institute for funding this project
+
 R-INLA development team
 
 ## Disclaimer
