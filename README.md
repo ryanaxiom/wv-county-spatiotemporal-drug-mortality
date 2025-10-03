@@ -2,7 +2,7 @@
 County-level and state-level spatiotemporal analysis of opioid and stimulant mortality in West Virginia (2015-2023) using Zero-Inflated Poisson models in R-INLA
 
 ## Overview
-The goal of this project was to develop a single model using the R programming language to predict both county-level and state-level death counts due to opioid and stimulant overdose in WV. This required careful consideration of model type, development, selection, and error propagation at various levels. Overall, the project was exceptionally effective in both modeling the training set and predicting the testing set with excellent Bayesian credible interval coverage for both the individual counties as well as at the state level.
+The goal of this project was to develop a single model using the R programming language to predict both county-level and state-level death counts due to opioid and stimulant overdose in WV. This required careful consideration of model type, development, selection, and error propagation at various levels. Overall, the project was exceptionally effective in both modeling the training set and predicting the testing set with excellent Bayesian credible interval coverage (99%) for both the individual counties as well as at the state level, while properly handling the 58.7% zero-inflation in the mortality data.
 
 INLA provides a fast and efficient alternative to Markov Chain Monte Carlo (MCMC) methods for Bayesian inference in latent Gaussian models. INLA utilizes Integrated Nested Laplace Approximation to deterministically approximate the marginal posterior distributions. INLA is widely applicable to latent Gaussian models and only requires that the latent field (random effects, spatial effects, etc) must have a joint multivariate Gaussian distribution, though the observations themselves can follow any distribution in the exponential family (normal, Poisson, binomial, negative binomial, gamma, beta, etc). In that case, INLA is much faster (100-1000x+) and more computationally efficient than MCMC as well as being easier to implement (no need for convergence diagnostics or tuning) and generally very accurate. However, it is not a "silver bullet" solution as it cannot model non-Gaussian latent fields (eg models with t-distributed random effects), complex non-linear relationships that can't be approximated within LGM, discrete latent variables, random forests, neural networks. In contrast, MCMC works with non-Gaussian latent fields as well and on very small datasets (N<100) as approximate methods will be less accurate. It can also model complex non-linear relationships and will give the full joint posterior distributions (unlike INLA which approximates the posterior marginal distributions). This comes at the expense of speed (hours or days for complex spatial-temporal models), convergence issues, diagnostics burdens, high memory usage, and tuning random sampling methods. Choosing INLA over MCMC likely saved months of computational time in developing this predictive model while giving results that are essentially identical.
 
@@ -35,17 +35,21 @@ This methodology handles zero-inflated count data very effectively. ZINB could p
 
 ## Key Findings
 
-### Model Comparison: Interaction vs Separable
+### Model Performance Progression
 The analysis demonstrates clear improvements at each modeling stage:
-
 - **Baseline → Single Component**: 28% MAE reduction
 - **Single Component → Separable**: 20.6% MAE reduction  
-- **Separable → Interaction**: 1.7% MAE reduction
-- **Overall (Baseline → Best)**: 50.3% MAE reduction
-- **Counties with improved predictions (Separable → Interaction):** 52.8%
+- **Separable → Interaction**: 1.7% MAE reduction (52.8% of counties improved)
+- **Overall (Baseline → Best)**: 44% MAE reduction
+
+**Final model comparison:**
 - **Best interaction model:** adjacency_ar1_period (WAIC: 10935.3)  
 - **Best separable model:** adjacency_ar1 (WAIC: 11014.4)
-- **Statistical evidence (Separable → Interaction)** 79.1 WAIC units
+- **Statistical evidence:** 79.1 WAIC units (decisive for interactions)
+
+**Technical achievements:**
+- ZIP models effectively handle 58.7% zero observations in the data
+- Best model achieves 99% coverage with properly calibrated credible intervals
 
 While the final interaction improvement is modest (1.7%), the 79.1 WAIC unit difference provides decisive statistical evidence for space-time interactions.
 
@@ -77,6 +81,7 @@ When comparing separable versus interaction models:
 - ggrepel
 - cowplot
 - sf
+- sn
 - spdep
 - tidyr
 - maps
@@ -100,7 +105,7 @@ install.packages("INLA", repos = c(getOption("repos"),
                 INLA = "https://inla.r-inla-download.org/R/stable"))
 
 # Install other dependencies
-install.packages(c("dplyr", "ggplot2", "ggrepel", "cowplot", "sf", "spdep", "tidyr", "maps", "readr", "zoo", "DT", "tigris", "viridis", "gridExtra", "forecast", "scales", "knitr", "lubridate", "Matrix", "parallel"))
+install.packages(c("dplyr", "ggplot2", "ggrepel", "cowplot", "sf", "sn", "spdep", "tidyr", "maps", "readr", "zoo", "DT", "tigris", "viridis", "gridExtra", "forecast", "scales", "knitr", "lubridate", "Matrix", "parallel"))
 ```
 ## Data Requirements
 Note: Original data cannot be shared due to confidentiality agreements
@@ -147,15 +152,22 @@ Researchers interested in similar data should contact the West Virginia Departme
 
 ### Expected Runtime
   Total pipeline runtime varies by hardware:
-   - Apple M1 MacBook Pro: ~30-40 minutes
-   - Modern desktop (Intel i9-14900K): ~15-20 minutes (estimated)
+   - Apple M1 Max MacBook Pro: ~40-45 minutes
+   - Modern desktop (Intel i9-14900KF): ~17 minutes
    
-  Individual phase times on M1:
+  Individual phase times on M1 Max:
    - Phase 0-1: ~2 minutes
    - Phase 2-2a: ~5 minutes  
-   - Phase 3: ~10 minutes
-   - Phase 4: ~15 minutes
+   - Phase 3: ~8 minutes
+   - Phase 4: ~25 minutes
    - Phase 5-6: ~5 minutes
+
+  Individual phase times on M1 Max:
+   - Phase 0-1: ~22 seconds
+   - Phase 2-2a: ~40 seconds
+   - Phase 3: ~40 seconds
+   - Phase 4: ~14 minutes
+   - Phase 5-6: ~1.5 minutes
 
 ### Running the Full Pipeline
 
