@@ -465,13 +465,36 @@ extract_county_temporal_effects <- function(model_result, model_name) {
   
   model <- model_result$model
   
+  # Define ZIP quantile function
+  qzip <- function(q, lambda, pi) {
+    # pi is zero-inflation probability
+    if (q <= pi) return(0)
+    else return(qpois((q - pi)/(1 - pi), lambda))
+  }
+  
+  # Extract zero-inflation probability from the model
+  zero_prob <- 0.1  # Default fallback
+  if (!is.null(model$summary.hyperpar)) {
+    # Look for zero-probability parameter in hyperparameters
+    zero_prob_row <- grep("zero.*probability", rownames(model$summary.hyperpar), ignore.case = TRUE)
+    if (length(zero_prob_row) > 0) {
+      zero_prob <- model$summary.hyperpar[zero_prob_row[1], "mean"]
+      cat("  Zero-inflation probability:", round(zero_prob, 3), "\n")
+    } else {
+      cat("  Warning: Zero-inflation probability not found, using default 0.1\n")
+    }
+  }
+  
+  # Check the actual hyperparameter name and value
+  print(model$summary.hyperpar)
+
   # Get fitted values (these intervals are WRONG - based on pooled sample size)
   fitted_summary <- model$summary.fitted.values
   fitted_mean <- fitted_summary$mean
   fitted_lower_pooled <- fitted_summary$`0.025quant`
   fitted_upper_pooled <- fitted_summary$`0.975quant`
   
-  cat("  Processing", model_name, "- correcting intervals...\n")
+  cat("  Processing", model_name, "- adapting intervals...\n")
   
   # Calculate county-level intervals
   proper_lower <- numeric(length(fitted_mean))
@@ -537,20 +560,25 @@ extract_county_temporal_effects <- function(model_result, model_name) {
     total_var <- lambda + total_uncertainty
     total_sd <- sqrt(total_var)
     
-    # Rate-adaptive intervals based on expected count level
-    if (lambda < 0.5) {
-      # Very rare events: wider credible intervals (90% to capture uncertainty)
-      proper_lower[i] <- 0
-      proper_upper[i] <- qpois(0.90, lambda + sqrt(total_uncertainty))
-    } else if (lambda < 2) {
-      # Low rates: 95% credible intervals
-      proper_lower[i] <- max(0, qpois(0.05, lambda))
-      proper_upper[i] <- qpois(0.95, lambda + sqrt(total_uncertainty))
-    } else {
-      # Higher rates: standard 95% intervals because Poisson->Normal as rate increases
-      proper_lower[i] <- max(0, qnorm(0.025, lambda, total_sd))
-      proper_upper[i] <- qnorm(0.975, lambda, total_sd)
-    }
+	# # Uncomment for rate-adaptive intervals of some kind
+	#     if (lambda < 0.5) {
+	#       # Very rare events: use ZIP quantiles
+	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+	#     } else if (lambda < 2) {
+	#       # Low rates: ZIP quantiles
+	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+	#     } else {
+	#       # Higher rates: still use ZIP (not normal approximation since we have ZIP model)
+	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+	#     }
+	
+	# Calculate proper ZIP intervals for each observation
+    # Use consistent 95% credible intervals for all rate levels
+    proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+    proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
   }
   
   # Round to whole numbers (counts must be integers)
@@ -591,6 +619,8 @@ extract_county_temporal_effects <- function(model_result, model_name) {
   
   return(effects_data)
 }
+
+
 
 # Extract effects for best models along with credible intervals
 best_models_to_plot <- head(county_comparison_metrics$model_name, 3)

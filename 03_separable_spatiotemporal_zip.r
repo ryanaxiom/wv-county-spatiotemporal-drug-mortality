@@ -244,84 +244,6 @@ print(complexity_table)
 
 cat("\n--- Step 4: Fitting Spatiotemporal Models ---\n")
 
-# Function to create formula from components
-create_spatiotemporal_formula <- function(model_spec) {
-  fixed_part <- model_spec$fixed_formula
-  random_part <- model_spec$random_formula
-  
-  formula_str <- paste("distinct_patient_count ~", fixed_part)
-  
-  if (!is.null(random_part)) {
-    formula_str <- paste(formula_str, "+", random_part)
-  }
-  
-  formula_str <- paste(formula_str, "+ offset(log_pop_offset)")
-  
-  as.formula(formula_str)
-}
-
-# Function to fit a single spatiotemporal model
-fit_spatiotemporal_model <- function(model_spec, train_data, model_name) {
-
-  
-  start_time <- Sys.time()
-  
-  # Set up precision matrices in global environment if needed
-  if (!is.null(model_spec$spatial_matrix)) {
-    if (model_spec$spatial_component == "adjacency") {
-      assign("Q_adj", model_spec$spatial_matrix, envir = .GlobalEnv)
-    } else if (model_spec$spatial_component == "exponential") {
-      assign("Q_exp", model_spec$spatial_matrix, envir = .GlobalEnv)
-    } else if (model_spec$spatial_component == "gaussian") {
-      assign("Q_gauss", model_spec$spatial_matrix, envir = .GlobalEnv)
-    }
-  }
-  
-  # Create formula
-  formula <- create_spatiotemporal_formula(model_spec)
-  
-  # Fit model
-  tryCatch({
-    result <- fit_model_with_zinb_support(formula, train_data, CONFIG$FAMILY)
-  
-    end_time <- Sys.time()
-    runtime <- as.numeric(difftime(end_time, start_time, units = "secs"))
-  
-    # Check for successful fit
-    if (is.null(result) || any(is.na(result$summary.fixed))) {
-      cat("Fitting", model_name, "model (complexity:", model_spec$complexity_score, ") FAILED\n")
-      return(list(
-        model = NULL,
-        fit_success = FALSE,
-        error_message = "Model fitting failed",
-        runtime = runtime
-      ))
-    }
-  
-    # Print complete success message
-    cat("Fit", model_name, "model (complexity:", model_spec$complexity_score, ") ✓ (", round(runtime, 1), "s)\n")
-  
-    return(list(
-      model = result,
-      model_spec = model_spec,
-      fit_success = TRUE,
-      runtime = runtime,
-      formula = formula
-    ))
-   
-  }, error = function(e) {
-    end_time <- Sys.time()
-    runtime <- as.numeric(difftime(end_time, start_time, units = "secs"))
-  
-    cat("Fitting", model_name, "model (complexity:", model_spec$complexity_score, ") ERROR:", e$message, "\n")
-    return(list(
-      model = NULL,
-      fit_success = FALSE,
-      error_message = e$message,
-      runtime = runtime
-    ))
-  })
-}
 # Fit models in parallel
 models_by_complexity <- model_combinations[order(sapply(model_combinations, function(x) x$complexity_score))]
 
@@ -329,7 +251,7 @@ cat("Fitting models in parallel...\n")
 parallel_env <- setup_parallel() # Uses all cores minus 1
 cat("Using", parallel_env$cores, "cores\n\n")
 
-# Timing estimate
+# Status update
 cat("Fitting", length(models_by_complexity), "models on", parallel_env$cores, "cores\n")
 
 if (parallel_env$type == "mclapply") {
@@ -340,20 +262,43 @@ if (parallel_env$type == "mclapply") {
   }, mc.cores = parallel_env$cores)
 } else {
   # Windows
-  clusterEvalQ(parallel_env$cluster, {
-    library(INLA)
-    library(dplyr)
-    source("00_model_utilities.r")
-  })
-  clusterExport(parallel_env$cluster, c("train_data", "precision_matrices", "CONFIG", 
-                                        "fit_spatiotemporal_model", "models_by_complexity"))
-  
-  spatiotemporal_results <- parLapply(parallel_env$cluster, names(models_by_complexity), function(model_name) {
-    model_spec <- models_by_complexity[[model_name]]
-    fit_spatiotemporal_model(model_spec, train_data, model_name)
-  })
-  
-  stopCluster(parallel_env$cluster)
+clusterEvalQ(parallel_env$cluster, {
+  library(INLA)
+  library(dplyr)
+  source("00_model_utilities.r")
+})
+
+clusterExport(parallel_env$cluster, c("train_data", "precision_matrices", "CONFIG", 
+                                      "fit_spatiotemporal_model", "models_by_complexity",
+                                      "create_spatiotemporal_formula"))  # Correct name
+
+spatiotemporal_results <- parLapply(parallel_env$cluster, names(models_by_complexity), function(model_name) {
+  model_spec <- models_by_complexity[[model_name]]
+  fit_spatiotemporal_model(model_spec, train_data, model_name)
+})
+
+cat("Starting", length(models_by_complexity), "models...\n")
+completed <- 0
+
+for (result in models_by_complexity) {
+  completed <- completed + 1
+  cat("\rCompleted:", completed, "/", length(models_by_complexity))
+}
+cat("\n")
+
+# Report model fit times
+for (i in seq_along(spatiotemporal_results)) {
+  result <- spatiotemporal_results[[i]]
+  model_name <- names(models_by_complexity)[i]
+  if (result$fit_success) {
+    cat("✓", model_name, "(", round(result$runtime, 1), "s)\n")
+  } else {
+    cat("✗", model_name, "FAILED\n")
+  }
+}
+
+stopCluster(parallel_env$cluster)
+
 }
 
 names(spatiotemporal_results) <- names(models_by_complexity)

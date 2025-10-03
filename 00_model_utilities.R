@@ -56,3 +56,82 @@ fit_model_with_zinb_support <- function(formula, data, family, verbose = FALSE) 
   
   return(result)
 }
+
+# Function to create formula from components
+create_spatiotemporal_formula <- function(model_spec) {
+  fixed_part <- model_spec$fixed_formula
+  random_part <- model_spec$random_formula
+  
+  formula_str <- paste("distinct_patient_count ~", fixed_part)
+  
+  if (!is.null(random_part)) {
+    formula_str <- paste(formula_str, "+", random_part)
+  }
+  
+  formula_str <- paste(formula_str, "+ offset(log_pop_offset)")
+  
+  as.formula(formula_str)
+}
+
+# Function to fit a single spatiotemporal model
+fit_spatiotemporal_model <- function(model_spec, train_data, model_name) {
+
+  
+  start_time <- Sys.time()
+  
+  # Set up precision matrices in global environment if needed
+  if (!is.null(model_spec$spatial_matrix)) {
+    if (model_spec$spatial_component == "adjacency") {
+      assign("Q_adj", model_spec$spatial_matrix, envir = .GlobalEnv)
+    } else if (model_spec$spatial_component == "exponential") {
+      assign("Q_exp", model_spec$spatial_matrix, envir = .GlobalEnv)
+    } else if (model_spec$spatial_component == "gaussian") {
+      assign("Q_gauss", model_spec$spatial_matrix, envir = .GlobalEnv)
+    }
+  }
+  
+  # Create formula
+  formula <- create_spatiotemporal_formula(model_spec)
+  
+  # Fit model
+  tryCatch({
+    result <- fit_model_with_zinb_support(formula, train_data, CONFIG$FAMILY)
+  
+    end_time <- Sys.time()
+    runtime <- as.numeric(difftime(end_time, start_time, units = "secs"))
+  
+    # Check for successful fit
+    if (is.null(result) || any(is.na(result$summary.fixed))) {
+      cat("Fitting", model_name, "model (complexity:", model_spec$complexity_score, ") FAILED\n")
+      return(list(
+        model = NULL,
+        fit_success = FALSE,
+        error_message = "Model fitting failed",
+        runtime = runtime
+      ))
+    }
+  
+    # Print complete success message
+    cat("Fit", model_name, "model (complexity:", model_spec$complexity_score, ") ✓ (", round(runtime, 1), "s)\n")
+  
+    return(list(
+      model = result,
+      model_spec = model_spec,
+      fit_success = TRUE,
+      runtime = runtime,
+      formula = formula
+    ))
+   
+  }, error = function(e) {
+    end_time <- Sys.time()
+    runtime <- as.numeric(difftime(end_time, start_time, units = "secs"))
+  
+    cat("Fitting", model_name, "model (complexity:", model_spec$complexity_score, ") ERROR:", e$message, "\n")
+    return(list(
+      model = NULL,
+      fit_success = FALSE,
+      error_message = e$message,
+      runtime = runtime
+    ))
+  })
+}

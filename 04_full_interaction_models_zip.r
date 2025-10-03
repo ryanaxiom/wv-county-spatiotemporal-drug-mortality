@@ -483,7 +483,7 @@ cat("Fitting interaction models in parallel...\n")
 parallel_env <- setup_parallel(n_cores = 6)  
 cat("Using", parallel_env$cores, "cores\n\n")
 
-# Timing estimate
+# Status update
 cat("Fitting", length(interaction_models), "models on", parallel_env$cores, "cores\n")
 
 if (parallel_env$type == "mclapply") {
@@ -508,14 +508,36 @@ if (parallel_env$type == "mclapply") {
     model_spec <- interaction_models[[model_name]]
     fit_interaction_model(model_spec, train_interaction_data, model_name)
   })
+
+  cat("Starting", length(interaction_models), "models...\n")
+  completed <- 0
+
+  for (result in interaction_results) {
+  completed <- completed + 1
+  cat("\rCompleted:", completed, "/", length(interaction_models))
+  }
+  cat("\n")
   
+  # Report model fit times
+  for (i in seq_along(interaction_results)) {
+    result <- interaction_results[[i]]
+    model_name <- names(interaction_models)[i]
+    if (result$fit_success) {
+      cat("✓", model_name, "(", round(result$runtime, 1), "s)\n")
+    } else {
+      cat("✗", model_name, "FAILED\n")
+    }
+  }
+
   stopCluster(parallel_env$cluster)
+
 }
 
 # Set names on results
 names(interaction_results) <- names(interaction_models)
 successful_interactions <- sum(sapply(interaction_results, function(x) x$fit_success))
 total_models <- length(interaction_models)
+
 
 cat("\n✓ Successfully fit", successful_interactions, "out of", total_models, "interaction models\n")
 

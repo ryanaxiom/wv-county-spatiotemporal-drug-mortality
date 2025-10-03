@@ -6,8 +6,8 @@
 # DEVELOPMENT PHASE 5: Enhanced Model Diagnostics & County Analysis
 # - Load all phase results efficiently
 # - Comprehensive model comparison with proper WAIC interpretation
-# - Proper ZIP uncertainty quantification (proper credible intervals)
-# - County-level prediction analysis with proper 95% credible intervals
+# - Proper ZIP uncertainty quantification with appropriate credible intervals
+# - County-level prediction analysis with appropriate 95% credible intervals
 # - Individual county plots and grid visualizations
 # - Export publication-ready summary tables and county analysis
 # ==============================================================================
@@ -752,7 +752,7 @@ cat("--- Step 8: Creating Individual County Plots ---\n")
 # Create output directory
 dir.create("outputs/plots/individual_counties", showWarnings = FALSE, recursive = TRUE)
 
-# Function to create individual county plot - FIXED DATE USAGE
+# Function to create individual county plot
 create_county_plot <- function(county_name, predictions_df, county_stats) {
   county_data <- predictions_df %>%
     filter(county == county_name)
@@ -760,7 +760,7 @@ create_county_plot <- function(county_name, predictions_df, county_stats) {
   stats <- county_stats %>%
     filter(county == county_name)
   
-  p <- ggplot(county_data, aes(x = date)) +  # Use 'date' column, not year_month
+  p <- ggplot(county_data, aes(x = date)) +  # Use 'date' column
     geom_ribbon(aes(ymin = fitted_lower, ymax = fitted_upper), 
                 fill = "red", alpha = 0.25) +
     geom_line(aes(y = fitted_mean), color = "red", linewidth = 1) +
@@ -935,7 +935,7 @@ cat("--- Step 11: Generating Performance Summary and Reports ---\n")
 # Create output directory
 dir.create("outputs/diagnostics", showWarnings = FALSE, recursive = TRUE)
 
-# Create summary table for export - FIXED: Added row.names = NULL
+# Create summary table for export
 county_summary <- county_fit_stats %>%
   arrange(desc(death_rate_per_1000)) %>%
   select(
@@ -960,7 +960,7 @@ county_summary <- county_fit_stats %>%
 
 # Save summary CSV
 write.csv(county_summary, 
-          paste0("outputs/diagnostics/county_performance_summary_", 
+          paste0("outputs/models/county_performance_summary_", 
                 RESPONSE_TYPE, ".csv"),
           row.names = FALSE)
 
@@ -992,10 +992,10 @@ diagnostic_summary <- data.frame(
 cat("✓ Generated diagnostic summary\n\n")
 
 # ==============================================================================
-# 12. CREATE COMPREHENSIVE ANALYSIS REPORT - FIXED
+# 12. CREATE COMPREHENSIVE ANALYSIS REPORT
 # ==============================================================================
 
-cat("\n--- Step 12: Creating Comprehensive Analysis Report (Fixed) ---\n")
+cat("\n--- Step 12: Creating Comprehensive Analysis Report ---\n")
 
 # Helper function for string repetition
 `%.%` <- function(x, n) {
@@ -1003,8 +1003,8 @@ cat("\n--- Step 12: Creating Comprehensive Analysis Report (Fixed) ---\n")
 }
 
 # Calculate coverage metrics that exist
-inla_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower_wrong & 
-                     predictions_df$observed <= predictions_df$fitted_upper_wrong, na.rm = TRUE)
+inla_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower_inla & 
+                     predictions_df$observed <= predictions_df$fitted_upper_inla, na.rm = TRUE)
 proper_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower & 
                        predictions_df$observed <= predictions_df$fitted_upper, na.rm = TRUE)
 
@@ -1025,7 +1025,7 @@ report_lines <- c(
   "",
   "PREDICTION PERFORMANCE (COUNTY-LEVEL CREDIBLE INTERVALS)",
   "-" %.% 40,
-  paste("INLA intervals (full sample size, incorrect credible interval size):", round(inla_coverage * 100, 1), "%"),
+  paste("INLA intervals coverage (incorrectly uses full sample size):", round(inla_coverage * 100, 1), "%"),
   paste("Correct county credible interval true coverage:", round(proper_coverage * 100, 1), "%"),
   paste("Overall RMSE:", round(rmse, 3)),
   paste("Overall MAE:", round(mae, 3)),
@@ -1057,10 +1057,10 @@ writeLines(report_lines,
 cat("✓ Saved comprehensive analysis report\n\n")
 
 # ==============================================================================
-# 13. CROSS-VALIDATION AND PREDICTION METRICS - FIXED
+# 13. CROSS-VALIDATION AND PREDICTION METRICS
 # ==============================================================================
 
-cat("--- Step 13: Cross-Validation and Prediction Metrics (Fixed) ---\n")
+cat("--- Step 13: Cross-Validation and Prediction Metrics ---\n")
 
 # Calculate additional prediction metrics using existing variables
 inla_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower_wrong & 
@@ -1081,7 +1081,7 @@ prediction_metrics <- list(
   exact_predictions = mean(round(predictions_df$fitted_mean) == predictions_df$observed, 
                           na.rm = TRUE),
   mean_calibrated_width = mean(predictions_df$fitted_upper - predictions_df$fitted_lower),
-  mean_inla_width = mean(predictions_df$fitted_upper_wrong - predictions_df$fitted_lower_wrong)
+  mean_inla_width = mean(predictions_df$fitted_upper_inla - predictions_df$fitted_lower_inla)
 )
 
 cat("✓ Final prediction metrics (calibrated intervals):\n")
@@ -1098,7 +1098,7 @@ cat("  INLA credible interval width:", round(prediction_metrics$mean_inla_width,
 
 # Save prediction metrics
 saveRDS(prediction_metrics, 
-        paste0("outputs/diagnostics/prediction_metrics_", RESPONSE_TYPE, ".rds"))
+        paste0("outputs/models/phase5_prediction_metrics_", RESPONSE_TYPE, ".rds"))
 
 # ==============================================================================
 # 14. STATE-LEVEL PREDICTIONS USING PROPER STATE MODEL CREDIBLE INTERVALS

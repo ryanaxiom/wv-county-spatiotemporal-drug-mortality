@@ -67,7 +67,7 @@ if (file.exists(csv_file)) {
 }
 
 # Load Phase 05 county summary if available
-county_summary_file <- paste0("outputs/diagnostics/county_performance_summary_", RESPONSE_TYPE, ".csv")
+county_summary_file <- paste0("outputs/models/county_performance_summary_", RESPONSE_TYPE, ".csv")
 county_summary <- load_data_safely(county_summary_file, "Phase 05 county summary")
 
 # Validate we have the essential data
@@ -96,14 +96,15 @@ if (!"model_type" %in% names(all_models_comparison)) {
 cat("\nModel Type Distribution:\n")
 print(table(all_models_comparison$model_type))
 
-# Ensure runtime column exists
-if (!"runtime_mins" %in% names(all_models_comparison)) {
-  if ("runtime_seconds" %in% names(all_models_comparison)) {
-    all_models_comparison$runtime_mins <- all_models_comparison$runtime_seconds / 60
-  } else if ("runtime" %in% names(all_models_comparison)) {
-    all_models_comparison$runtime_mins <- all_models_comparison$runtime / 60
+# Ensure runtime column exists (all values in seconds)
+if (!"runtime_seconds" %in% names(all_models_comparison)) {
+  if ("runtime" %in% names(all_models_comparison)) {
+    all_models_comparison$runtime_seconds <- all_models_comparison$runtime
+  } else if ("runtime_mins" %in% names(all_models_comparison)) {
+    # Legacy column name, but values are actually in seconds
+    all_models_comparison$runtime_seconds <- all_models_comparison$runtime_mins
   } else {
-    all_models_comparison$runtime_mins <- 1  # Dummy value
+    all_models_comparison$runtime_seconds <- 1  # Dummy value
   }
 }
 
@@ -538,15 +539,15 @@ model_stage_colors <- c(
 cat("\n✓ Color scheme defined for model types\n")
 
 # ==============================================================================
-# 5. CREATE PLOT 3: PERFORMANCE VS COMPLEXITY - FIXED
+# 5. CREATE PLOT 3: PERFORMANCE VS COMPLEXITY
 # ==============================================================================
 
 cat("\n--- Step 5: Creating Performance vs Complexity Plot ---\n")
 
 plot3 <- ggplot(all_models_comparison, aes(x = complexity, y = waic)) +
-  geom_point(aes(color = model_type, size = runtime_mins), alpha = 0.7) +
+  geom_point(aes(color = model_type, size = runtime_seconds), alpha = 0.7) +
   scale_color_viridis_d(name = "Model Type") +
-  scale_size_continuous(name = "Runtime\n(minutes)", range = c(1, 6)) +
+  scale_size_continuous(name = "Runtime\n(seconds)", range = c(1, 6)) +
   theme_minimal() +
   labs(
     title = "ZIP Model Performance vs Complexity",
@@ -584,7 +585,7 @@ ggsave("outputs/plots/phase6_waic_distribution.png", plot5,
        width = 10, height = 6, dpi = 300, bg = "white")
 
 # Runtime vs Performance
-plot6 <- ggplot(all_models_comparison, aes(x = runtime_mins, y = waic)) +
+plot6 <- ggplot(all_models_comparison, aes(x = runtime_seconds, y = waic)) +
   geom_point(aes(color = model_type), size = 3, alpha = 1.0) +  # Also make solid
   scale_color_manual(values = model_stage_colors[c("single_component", "separable", "interaction")],
                     name = "Model Type",
@@ -595,7 +596,7 @@ plot6 <- ggplot(all_models_comparison, aes(x = runtime_mins, y = waic)) +
   theme_minimal() +
   labs(title = "Runtime vs Model Performance",
        subtitle = "Trade-off between computational cost and WAIC",
-       x = "Runtime (minutes, log scale)", y = "WAIC") +
+       x = "Runtime (seconds, log scale)", y = "WAIC") +
   theme(plot.title = element_text(size = 14, face = "bold"))
 
 ggsave("outputs/plots/phase6_runtime_vs_performance.png", plot6, 
@@ -604,7 +605,7 @@ ggsave("outputs/plots/phase6_runtime_vs_performance.png", plot6,
 cat("✓ Saved additional analysis plots\n")
 
 # ==============================================================================
-# STEP 9: IMPROVED VISUALIZATIONS (FIXED V2)
+# STEP 9: IMPROVED VISUALIZATIONS
 # ==============================================================================
 
 cat("\n--- Step 9: Creating Improved Visualizations ---\n")
@@ -892,7 +893,8 @@ progression_data_mae <- progression_data %>%
     mae_improvement = lag(mae) - mae,
     mae_improvement_pct = round((lag(mae) - mae) / lag(mae) * 100, 1),
     cumulative_mae_improvement = baseline_mae - mae,
-    cumulative_mae_pct = round((baseline_mae - mae) / baseline_mae * 100, 1)
+    cumulative_mae_pct = round((baseline_mae - mae) / baseline_mae * 100, 1),
+	mae_display = paste0(round(mae, 2), " deaths")
   )
   
     # Create improvement labels with MAE percentages
@@ -911,9 +913,9 @@ progression_data_mae <- progression_data %>%
     plot2_labels <- ggplot(progression_data_mae, aes(x = stage, y = waic, group = 1)) +
       geom_col(aes(fill = stage), alpha = 0.8, width = 0.6) +
     
-      # WAIC values on top of bars
-      geom_text(aes(label = comma(round(waic, 0))), 
-                vjust = -0.5, size = 3.5, fontface = "bold") +
+	  # MAE values on top of bars
+	  geom_text(aes(label = mae_display), 
+	            vjust = -0.5, size = 3.5, fontface = "bold") +
     
       # MAE improvement percentages in bars
       {if(nrow(improvement_labels_mae) > 0) {
@@ -928,7 +930,7 @@ progression_data_mae <- progression_data %>%
                     aes(x = stage, y = label_y,
                         label = label_text),
                     size = 3, fill = "#E8F5E9", color = "#1B5E20", 
-                    fontface = "bold", label.size = 0.3)
+                    fontface = "bold", linewidth = 0.3)
       }} +
     
       scale_fill_manual(values = c("Baseline" = "gray60", 
@@ -1018,7 +1020,7 @@ plot3_improved <- ggplot(all_models_comparison, aes(x = complexity, y = waic)) +
             color = "darkgreen", linewidth = 1.5, alpha = 0.7, linetype = "dashed") +
   
   # All models - solid points, size by runtime
-  geom_point(aes(color = model_type, size = runtime_mins), alpha = 1.0) +
+  geom_point(aes(color = model_type, size = runtime_seconds), alpha = 1.0) +
   
   # Add arrows and labels for highlighted models
   {if(nrow(highlight_models) > 0) {
@@ -1042,7 +1044,7 @@ plot3_improved <- ggplot(all_models_comparison, aes(x = complexity, y = waic)) +
                  fill = "white",
                  label.padding = unit(0.3, "lines"),
                  label.size = 0.2,
-                 color = "gray30")  # Fixed color
+                 color = "gray30")
     )
   }} +
   
@@ -1054,7 +1056,7 @@ plot3_improved <- ggplot(all_models_comparison, aes(x = complexity, y = waic)) +
                     labels = c("single_component" = "Single Component",
                                "separable" = "Separable",
                                "interaction" = "Interaction")) +
-  scale_size_continuous(name = "Runtime\n(minutes)", range = c(1, 4)) +
+  scale_size_continuous(name = "Runtime\n(seconds)", range = c(1, 4)) +
   scale_y_continuous(labels = comma_format()) +
   theme_minimal() +
   labs(title = "Complexity-Performance Trade-off",
@@ -1171,7 +1173,7 @@ cat("✓ Saved phase6_real_world_impact.png\n")
 
 
 # ==============================================================================
-# STEP 10: FINAL EXECUTIVE DASHBOARD WITH ALL CORRECT PLOTS
+# STEP 10: FINAL EXECUTIVE DASHBOARD WITH APPROPRIATE PLOTS
 # ==============================================================================
 
 cat("\n--- Step 10: Creating Final Executive Dashboard ---\n")
@@ -1184,7 +1186,7 @@ if (!exists("plot1")) {
 # Use the improved model progression plot
 if (exists("plot2_improved")) {
   plot2 <- plot2
-  cat("✓ Using improved Model Progression plot\n")
+  cat("✓ Using Model Progression plot\n")
 } else if (exists("plot2_arrows")) {
   plot2 <- plot2_arrows
   cat("✓ Using arrows version of Model Progression plot\n")
@@ -1245,12 +1247,12 @@ if (!exists("plot4") || !exists("plot4_impact")) {
 # DASHBOARD ASSEMBLY
 # ==============================================================================
 
-cat("\n--- Assembling Dashboard with Correct Plots ---\n")
+cat("\n--- Assembling Dashboard with Plots ---\n")
 
-# Create the dashboard using the correct plots
+# Create the dashboard using the plots
 dashboard_grid <- plot_grid(
   plot1,     # A: Top 15 Models
-  plot2,              # B: Model Progression (should be plot2_labels)
+  plot2,              # B: Model Progression
   plot3_improved,     # C: Complexity-Performance
   plot4,              # D: Real-World Impact
   ncol = 2, 
@@ -1311,7 +1313,7 @@ cat("\n--- Step 11: Generating CSV Files and Summary Reports ---\n")
 
 # Save detailed model comparison
 write.csv(all_models_comparison, 
-          paste0("outputs/diagnostics/phase6_all_models_comparison_", RESPONSE_TYPE, ".csv"),
+          paste0("outputs/models/phase6_all_models_comparison_", RESPONSE_TYPE, ".csv"),
           row.names = FALSE)
 
 # Create best models summary
@@ -1321,12 +1323,12 @@ best_models_summary <- data.frame(
   Model_Type = head(all_models_comparison$model_type[order(all_models_comparison$waic)], 10),
   WAIC = head(sort(all_models_comparison$waic), 10),
   Complexity = head(all_models_comparison$complexity[order(all_models_comparison$waic)], 10),
-  Runtime_Minutes = head(all_models_comparison$runtime_mins[order(all_models_comparison$waic)], 10),
+  Runtime_Seconds = head(all_models_comparison$runtime_seconds[order(all_models_comparison$waic)], 10),
   stringsAsFactors = FALSE
 )
 
 write.csv(best_models_summary,
-          paste0("outputs/diagnostics/phase6_best_models_summary_", RESPONSE_TYPE, ".csv"),
+          paste0("outputs/models/phase6_best_models_summary_", RESPONSE_TYPE, ".csv"),
           row.names = FALSE)
 
 # Create improvement summary
@@ -1343,7 +1345,7 @@ improvement_summary <- data.frame(
 )
 
 write.csv(improvement_summary,
-          paste0("outputs/diagnostics/phase6_improvement_summary_", RESPONSE_TYPE, ".csv"),
+          paste0("outputs/models/phase6_improvement_summary_", RESPONSE_TYPE, ".csv"),
           row.names = FALSE)
 
 cat("✓ Saved CSV summaries\n")
@@ -1354,6 +1356,52 @@ cat("✓ Saved CSV summaries\n")
 
 cat("\n--- Step 12: Generating Comprehensive Text Summary ---\n")
 
+# Extract proper MAE/RMSE improvements if available
+mae_improvement_text <- ""
+rmse_improvement_text <- ""
+real_world_improvement_text <- ""
+
+if (!is.null(response_scale_metrics)) {
+  if (!is.null(response_scale_metrics$separable_mae) && !is.null(response_scale_metrics$interaction_mae)) {
+    mae_reduction <- response_scale_metrics$separable_mae - response_scale_metrics$interaction_mae
+    mae_reduction_pct <- round((mae_reduction / response_scale_metrics$separable_mae) * 100, 1)
+    
+    rmse_reduction <- response_scale_metrics$separable_rmse - response_scale_metrics$interaction_rmse
+    rmse_reduction_pct <- round((rmse_reduction / response_scale_metrics$separable_rmse) * 100, 1)
+    
+    mae_improvement_text <- paste0("✓ Real-world accuracy gain: ", mae_reduction_pct, 
+                                   "% reduction in MAE (", 
+                                   round(response_scale_metrics$separable_mae, 2), " → ",
+                                   round(response_scale_metrics$interaction_mae, 2), 
+                                   " deaths/county-month)\n")
+    
+    rmse_improvement_text <- paste0("✓ Prediction improvement: ", rmse_reduction_pct,
+                                    "% reduction in RMSE (", 
+                                    round(response_scale_metrics$separable_rmse, 2), " → ",
+                                    round(response_scale_metrics$interaction_rmse, 2),
+                                    " deaths/county-month)\n")
+    
+    real_world_improvement_text <- paste0(
+      "\nREAL-WORLD IMPACT:\n",
+      mae_improvement_text,
+      rmse_improvement_text,
+      "✓ Counties with improved predictions: ", 
+      round(response_scale_metrics$county_months_improved_pct, 1), "%\n"
+    )
+  }
+}
+
+# Interpret WAIC evidence strength for the summary
+waic_interpretation <- ""
+if (abs(interaction_improvement) > 20) {
+  waic_interpretation <- "decisive evidence for space-time interactions"
+} else if (abs(interaction_improvement) > 10) {
+  waic_interpretation <- "strong evidence for space-time interactions"
+} else if (abs(interaction_improvement) > 7) {
+  waic_interpretation <- "moderate evidence for space-time interactions"
+} else {
+  waic_interpretation <- "models perform equivalently"
+}
 
 summary_text <- paste0(
   "WV COUNTY ", toupper(RESPONSE_TYPE), " DEATH PREDICTION - EXECUTIVE SUMMARY (ZIP MODELS)\n",
@@ -1368,31 +1416,41 @@ summary_text <- paste0(
   "✓ Model type: ", best_overall$model_type, "\n",
   "✓ WAIC: ", round(best_overall$waic, 1), "\n",
   "✓ Complexity score: ", round(best_overall$complexity, 1), "\n",
-  "✓ Runtime: ", round(best_overall$runtime_mins, 1), " minutes\n\n",
+  "✓ Runtime: ", round(best_overall$runtime_seconds, 1), " seconds\n\n",
   
-  if (!is.na(interaction_pct) && !is.na(total_pct)) {
-      paste0(
-	  "✓ Interaction effects: ", round(abs(interaction_improvement), 1), " WAIC units = ", 
-      interaction_pct, "% improvement\n",
-      "✓ Total improvement: ", round(total_improvement, 1), " WAIC units = ", 
-      total_pct, "% improvement\n",
-      "✓ County-months improved annually: ~", county_months_improved, "\n"
-	  )
+  "MODEL COMPARISON - INTERACTION vs SEPARABLE:\n",
+  "✓ Interaction improvement: ", round(abs(interaction_improvement), 1), " WAIC units (", waic_interpretation, ")\n",
+  real_world_improvement_text,
+  if (nrow(best_interaction) > 0 && nrow(best_separable) > 0) {
+    paste0("✓ Best separable model: ", best_separable$model_name, " (WAIC: ", 
+           round(best_separable$waic, 1), ")\n",
+           "✓ Best interaction model: ", best_interaction$model_name, " (WAIC: ", 
+           round(best_interaction$waic, 1), ")\n")
+  } else "",
+  "\n",
+  
+  "EPIDEMIOLOGICAL IMPLICATIONS:\n",
+  if (abs(interaction_improvement) > 20) {
+    paste0(
+      "✓ Strong space-time interactions detected in ", RESPONSE_TYPE, " mortality patterns\n",
+      "✓ Spatial patterns evolved differently across time periods\n",
+      "✓ Policy interventions (2020-2022) had county-specific impacts\n",
+      "✓ County-targeted interventions recommended over uniform state-level approaches\n"
+    )
   } else {
-    # Use WAIC-only description
-      paste0(
-	  "✓ Interaction vs Separable: ", round(abs(interaction_improvement), 1), 
-      " WAIC units ", ifelse(interaction_improvement < 0, "(interaction better)", "(separable better)"), "\n",
-      "✓ Total improvement from baseline: ", round(total_improvement, 1), " WAIC units\n",
-      "✓ Response-scale metrics: Not available (model fitted values couldn't be extracted)\n"
-	  )
+    paste0(
+      "✓ Separable spatial and temporal patterns in ", RESPONSE_TYPE, " mortality\n",
+      "✓ Uniform temporal trends across counties\n",
+      "✓ State-level interventions likely as effective as county-specific approaches\n"
+    )
   },
+  "\n",
   
   "ZIP MODEL ADVANTAGES:\n",
   "✓ Optimal handling of zero-inflated count data\n",
   "✓ Proper statistical treatment of counties with zero deaths\n",
   "✓ Realistic confidence intervals for low-count scenarios\n",
-  "✓ Superior performance compared to traditional Poisson models\n\n",
+  "✓ Superior performance compared to Poisson based models\n\n",
   
   "PRACTICAL IMPLICATIONS:\n",
   "✓ County-level prediction: Enhanced accuracy for resource allocation\n",
@@ -1419,15 +1477,41 @@ if (!is.null(county_summary)) {
   )
 }
 
+# Add computational trade-off analysis
+computational_tradeoff <- ""
+if (nrow(best_interaction) > 0 && nrow(best_separable) > 0) {
+  runtime_ratio <- round(best_overall$runtime_seconds / best_separable$runtime_seconds, 1)
+  computational_tradeoff <- paste0(
+    "COMPUTATIONAL TRADE-OFF:\n",
+    "✓ Overall best model runtime: ~", round(best_overall$runtime_seconds, 2), " seconds\n",
+    "✓ Separable model runtime: ~", round(best_separable$runtime_seconds, 2), " seconds\n",
+    "✓ Runtime ratio: ", runtime_ratio, " — slower for interactions\n",
+    if (!is.null(mae_reduction_pct) && mae_reduction_pct > 1.5) {
+      paste0("✓ Recommendation: ", mae_reduction_pct, "% accuracy gain justifies the additional computational cost\n")
+    } else if (!is.null(mae_reduction_pct)) {
+      paste0("✓ Recommendation: ", mae_reduction_pct, "% accuracy gain may not justify ", runtime_ratio, "% more computational cost\n")
+    } else {
+      ""
+    },
+    "\n"
+  )
+}
+
 summary_text <- paste0(summary_text,
+  computational_tradeoff,
+  
   "IMPLEMENTATION RECOMMENDATION:\n",
   "Deploy ", best_overall$model_name, " for operational county-level prediction.\n",
-  "The Zero-Inflated Poisson framework provides the optimal statistical foundation\n",
+  if (abs(interaction_improvement) > 20) {
+    "The strong space-time interactions require the more complex model structure.\n"
+  } else {
+    "The Zero-Inflated Poisson framework provides the optimal statistical foundation.\n"
+  },
   "for modeling highly zero-inflated county-level health surveillance data.\n\n",
   
   "FILES GENERATED:\n",
-  "✓ Executive dashboard: phase6_executive_dashboard_combined.png\n",
-  "✓ Individual plots: phase6_*.png (6 plots)\n", 
+  "✓ Executive dashboard: phase6_executive_dashboard.png\n",
+  "✓ Individual plots: phase6_*.png (multiple plots)\n", 
   "✓ Model comparison: phase6_all_models_comparison_", RESPONSE_TYPE, ".csv\n",
   "✓ Best models summary: phase6_best_models_summary_", RESPONSE_TYPE, ".csv\n",
   "✓ Improvement metrics: phase6_improvement_summary_", RESPONSE_TYPE, ".csv\n\n",
@@ -1475,12 +1559,12 @@ for (file in files_created) {
   cat(file, "\n")
 }
 
-cat("\nCSV files generated (outputs/diagnostics/):\n") 
+cat("\nCSV files generated (outputs/models/):\n") 
 for (file in csv_files) {
   cat(file, "\n")
 }
 
-cat("\nText files generated (outputs/diagnostics/):\n")
+cat("\nText files generated (outputs/models/):\n")
 for (file in text_files) {
   cat(file, "\n")
 }
@@ -1499,5 +1583,5 @@ if (!is.null(county_summary)) {
 cat("\n✓ All ZIP model visualization outputs ready for stakeholders\n")
 
 # ==============================================================================
-# END OF FIXED ZIP MODEL VISUALIZATION DASHBOARD  
+# END OF ZIP MODEL VISUALIZATION DASHBOARD  
 # ==============================================================================
