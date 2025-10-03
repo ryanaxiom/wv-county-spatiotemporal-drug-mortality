@@ -63,7 +63,7 @@ The interaction effects indicate that:
 ### Computational Trade-off
 
 When comparing separable versus interaction models:
-- **Runtime increase:** 73× (0.18s → 13.11s)
+- **Runtime increase:** 1.5× (2.61s → 3.79s)
 - **Complexity increase:** 167% (score 3 → 8)
 - **Accuracy gain:** 1.7% over separable, 22.3% over single component
 - **Recommendation:** The modest accuracy gain and strong statistical evidence justify the computational cost for research/planning purposes. For real-time applications, the separable model may be preferred.
