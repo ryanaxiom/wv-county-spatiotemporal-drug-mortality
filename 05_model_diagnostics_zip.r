@@ -959,11 +959,6 @@ cat("\n--- Step 12: Creating Comprehensive Analysis Report ---\n")
   paste(rep(x, n), collapse = "")
 }
 
-# Calculate coverage metrics that exist
-inla_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower_inla & 
-                     predictions_df$observed <= predictions_df$fitted_upper_inla, na.rm = TRUE)
-proper_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower & 
-                       predictions_df$observed <= predictions_df$fitted_upper, na.rm = TRUE)
 
 # Create text report
 report_lines <- c(
@@ -982,8 +977,8 @@ report_lines <- c(
   "",
   "PREDICTION PERFORMANCE (COUNTY-LEVEL CREDIBLE INTERVALS)",
   "-" %.% 40,
-  paste("INLA pooled interval coverage:", round(inla_coverage * 100, 1), "%"),
-  paste("County-specific credible interval coverage:", round(proper_coverage * 100, 1), "%"),
+  paste("INLA pooled interval coverage:", round(coverage_inla * 100, 1), "%"),
+  paste("County-specific credible interval coverage:", round(coverage_calibrated * 100, 1), "%"),
   paste("Overall RMSE:", round(rmse, 3)),
   paste("Overall MAE:", round(mae, 3)),
   paste("Average County Coverage:", round(mean(county_fit_stats$coverage_95) * 100, 1), "%"),
@@ -1048,7 +1043,7 @@ cat("  95% Credible Coverage Coverage (default from INLA):", round(prediction_me
 cat("  Coverage improvement:", round(prediction_metrics$coverage_improvement * 100, 1), "percentage points\n")
 cat("  Correlation:", round(prediction_metrics$correlation, 3), "\n")
 cat("  Exact predictions:", round(prediction_metrics$exact_predictions * 100, 1), "%\n")
-cat("  Proper credible interval width:", round(prediction_metrics$mean_calibrated_width, 3), "\n")
+cat("  County-specific credible interval width:", round(prediction_metrics$mean_calibrated_width, 3), "\n")
 cat("  INLA credible interval width:", round(prediction_metrics$mean_inla_width, 3), "\n\n")
 
 # Save prediction metrics
