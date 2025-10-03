@@ -63,10 +63,10 @@ The interaction effects indicate that:
 ### Computational Trade-off
 
 When comparing separable versus interaction models:
-- **Runtime increase:** 1.5× (2.61s → 3.79s)
+- **Runtime increase:** 1.16-1.45× (10.86s → 12.61s on M1 Max, 2.82s → 4.1s on i9 14900kf)
 - **Complexity increase:** 167% (score 3 → 8)
 - **Accuracy gain:** 1.7% over separable, 22.3% over single component
-- **Recommendation:** The modest accuracy gain and strong statistical evidence justify the computational cost for research/planning purposes as well as real-time applications since the penalty is small (only 50% longer time to fit).
+- **Recommendation:** The modest accuracy gain and strong statistical evidence justify the computational cost for research/planning purposes as well as real-time applications since the penalty is small (only 16-45% longer time to fit).
 
 ## Requirements
 
