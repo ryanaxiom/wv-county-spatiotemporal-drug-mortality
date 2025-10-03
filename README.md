@@ -66,7 +66,7 @@ When comparing separable versus interaction models:
 - **Runtime increase:** 1.5× (2.61s → 3.79s)
 - **Complexity increase:** 167% (score 3 → 8)
 - **Accuracy gain:** 1.7% over separable, 22.3% over single component
-- **Recommendation:** The modest accuracy gain and strong statistical evidence justify the computational cost for research/planning purposes. For real-time applications, the separable model may be preferred.
+- **Recommendation:** The modest accuracy gain and strong statistical evidence justify the computational cost for research/planning purposes as well as real-time applications since the penalty is small (only 50% longer time to fit).
 
 ## Requirements
 
