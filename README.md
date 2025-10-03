@@ -152,22 +152,8 @@ Researchers interested in similar data should contact the West Virginia Departme
 
 ### Expected Runtime
   Total pipeline runtime varies by hardware:
-   - Apple M1 Max MacBook Pro: ~40-45 minutes
+   - Apple M1 Max MacBook Pro: ~45 minutes
    - Modern desktop (Intel i9-14900KF): ~17 minutes
-   
-  Individual phase times on M1 Max:
-   - Phase 0-1: ~2 minutes
-   - Phase 2-2a: ~5 minutes  
-   - Phase 3: ~8 minutes
-   - Phase 4: ~25 minutes
-   - Phase 5-6: ~5 minutes
-
-  Individual phase times on M1 Max:
-   - Phase 0-1: ~22 seconds
-   - Phase 2-2a: ~40 seconds
-   - Phase 3: ~40 seconds
-   - Phase 4: ~14 minutes
-   - Phase 5-6: ~1.5 minutes
 
 ### Running the Full Pipeline
 
