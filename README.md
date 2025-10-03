@@ -260,7 +260,8 @@ DOI: [pending]
 MIT License - see LICENSE file for details
 
 ## Contact
-Ryan Hansen - ryan.hansen@mail.wvu.edu ORCID: https://orcid.org/0000-0003-1350-4921
+Ryan Hansen - ryan.hansen@mail.wvu.edu
+ORCID: https://orcid.org/0000-0003-1350-4921
 West Virginia University
 Project Link: https://github.com/ryanaxiom/wv-county-spatiotemporal-drug-mortality
 
