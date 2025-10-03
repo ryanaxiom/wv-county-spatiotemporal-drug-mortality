@@ -635,7 +635,7 @@ for (plot_name in names(plots_to_save)) {
 cat("✓ Results saved to outputs/models/\n")
 cat("✓ Plots saved to outputs/plots/\n")
 
-# Create summary for next phase (DO NOT CHANGE for pipeline compatibility)
+# Create summary for next phase (maintains pipeline compatibility)
 summary_for_phase3 <- list(
   best_temporal_model = if (nrow(best_temporal) > 0) best_temporal$model_name else "baseline",
   temporal_model_available = nrow(best_temporal) > 0,

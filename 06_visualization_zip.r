@@ -70,6 +70,9 @@ if (file.exists(csv_file)) {
 county_summary_file <- paste0("outputs/models/county_performance_summary_", RESPONSE_TYPE, ".csv")
 county_summary <- load_data_safely(county_summary_file, "Phase 05 county summary")
 
+# Load prediction metrics
+prediction_metrics <- readRDS(paste0("outputs/models/phase5_prediction_metrics_", RESPONSE_TYPE, ".rds"))
+
 # Validate we have the essential data
 if (is.null(all_models_comparison) || nrow(all_models_comparison) == 0) {
   stop("ERROR: Could not load model comparison data.\n",
@@ -101,7 +104,7 @@ if (!"runtime_seconds" %in% names(all_models_comparison)) {
   if ("runtime" %in% names(all_models_comparison)) {
     all_models_comparison$runtime_seconds <- all_models_comparison$runtime
   } else if ("runtime_mins" %in% names(all_models_comparison)) {
-    # Legacy column name, but values are actually in seconds
+    # Column nameis historical but values are in seconds
     all_models_comparison$runtime_seconds <- all_models_comparison$runtime_mins
   } else {
     all_models_comparison$runtime_seconds <- 1  # Dummy value
@@ -164,9 +167,9 @@ phase3_rds <- paste0("outputs/models/phase3_spatiotemporal_", RESPONSE_TYPE, ".r
 if (file.exists(phase4_rds) && file.exists(phase3_rds)) {
   cat("Loading Phase 3 and Phase 4 model objects for response-scale metrics...\n")
   phase4_results <- readRDS(phase4_rds)
-  cat("\n--- Phase 4 Results Successfully LOADED ---\n")
+  cat("\n✔ Loaded Phase 4 results\n")
   phase3_results <- readRDS(phase3_rds)
-  cat("\n--- PHASE 3 RESULTS SUCCESSFULLY LOADED ---\n")
+  cat("\n✔ Loaded Phase 3 Results\n")
   
   # Load training data for response scale calculations
   data_splits_file <- paste0("outputs/data/", RESPONSE_TYPE, "_splits.rds")
@@ -202,13 +205,11 @@ if (file.exists(phase4_rds) && file.exists(phase3_rds)) {
     
     # Function to find and extract fitted values from both phases
     get_fitted_values <- function(model_name, phase4_results, phase3_results) {
-      cat("  Looking for model:", model_name, "\n")
       
       # Check Phase 4 interaction_results first
       if (!is.null(phase4_results$interaction_results)) {
         if (model_name %in% names(phase4_results$interaction_results)) {
           if (!is.null(phase4_results$interaction_results[[model_name]]$model)) {
-            cat("    Found in Phase 4 interaction_results\n")
             return(phase4_results$interaction_results[[model_name]]$model$summary.fitted.values$mean)
           }
         }
@@ -218,7 +219,6 @@ if (file.exists(phase4_rds) && file.exists(phase3_rds)) {
       if (!is.null(phase3_results$model_fits)) {
         if (model_name %in% names(phase3_results$model_fits)) {
           if (!is.null(phase3_results$model_fits[[model_name]]$model)) {
-            cat("    Found in Phase 3 model_fits\n")
             return(phase3_results$model_fits[[model_name]]$model$summary.fitted.values$mean)
           }
         }
@@ -605,10 +605,10 @@ ggsave("outputs/plots/phase6_runtime_vs_performance.png", plot6,
 cat("✓ Saved additional analysis plots\n")
 
 # ==============================================================================
-# STEP 9: IMPROVED VISUALIZATIONS
+# STEP 9: VISUALIZATIONS
 # ==============================================================================
 
-cat("\n--- Step 9: Creating Improved Visualizations ---\n")
+cat("\n--- Step 9: Creating Visualizations ---\n")
 
 # Extract key models for the progression plot
 baseline_model <- all_models_comparison %>%
@@ -727,14 +727,6 @@ if (nrow(baseline_model) == 0) {
     slice_max(waic, n = 1) %>%
     mutate(model_name = "Baseline")
   cat("  Warning: Using worst model as baseline\n")
-}
-
-# Using the previously defined single_component_candidates
-cat("\nSingle component models:\n")
-if (nrow(single_component_candidates) > 0) {
-  single_component_candidates %>%
-    select(model_name, waic, complexity_score) %>%
-    print()
 }
 
 # Select the best single component model
@@ -859,7 +851,7 @@ if (!is.null(single_component_fitted) && length(single_component_fitted) == leng
   cat("⚠ Estimated single component MAE:", round(single_component_mae, 3), "\n")
 }
 
-cat("\n--- Creating Model Progression with MAE Improvements ---\n")
+cat("\n--- Creating Model Progression ---\n")
 
 # Create progression data
 progression_data <- data.frame(
@@ -960,7 +952,6 @@ progression_data_mae <- progression_data %>%
 # Set as plot2 for dashboard
 plot2 <- plot2_labels  
 
-cat("✓ Model Progression updated with actual MAE improvements\n")
 cat("  Total MAE improvement: ", response_scale_metrics$total_mae_improvement, "%\n")
 
 
@@ -1034,17 +1025,22 @@ plot3_improved <- ggplot(all_models_comparison, aes(x = complexity, y = waic)) +
                    arrow = arrow(length = unit(0.3, "cm"), type = "closed"),
                    linewidth = 1.2),
       
-      # Add text labels below arrows
-      geom_label(data = highlight_models,  # geom_label gives labels a white background
-                 aes(x = complexity, 
-                     y = waic - (max(all_models_comparison$waic) - min(all_models_comparison$waic)) * 0.18,
-                     label = stage),
-                 size = 3.5,
-                 fontface = "bold",
-                 fill = "white",
-                 label.padding = unit(0.3, "lines"),
-                 label.size = 0.2,
-                 color = "gray30")
+	   # Add text labels below arrows
+	         geom_label(data = highlight_models %>%
+	                      mutate(label_x = case_when(
+	                        stage == "Single Component" ~ complexity + 0.5,
+	                        stage == "Interaction" ~ complexity - 0.15,
+	                        TRUE ~ complexity
+	                      )),
+	                    aes(x = label_x,
+	                        y = waic - (max(all_models_comparison$waic) - min(all_models_comparison$waic)) * 0.18,
+	                        label = stage),
+	                    size = 3.5,
+	                    fontface = "bold",
+	                    fill = "white",
+	                    label.padding = unit(0.3, "lines"),
+	                    linewidth = 0.2,
+	                    color = "gray30")
     )
   }} +
   
@@ -1120,6 +1116,8 @@ plot4_improved <- ggplot(top_10_ci, aes(x = reorder(model_short, -waic), y = wai
 use_alternative <- FALSE
 plot4_final <- plot4_improved
 
+
+
 if (!is.null(response_scale_metrics)) {
   use_alternative <- TRUE
   
@@ -1134,16 +1132,16 @@ if (!is.null(response_scale_metrics)) {
   }
   
   impact_data <- data.frame(
-    metric = c("Average Error\n(MAE)", "Prediction\nAccuracy", "Counties\nImproved"),
-    improvement = c(
-      ifelse(!is.null(response_scale_metrics$total_mae_improvement), 
-             response_scale_metrics$total_mae_improvement, 0),
-      ifelse(!is.null(response_scale_metrics$total_mae_improvement), 
-             response_scale_metrics$total_mae_improvement, 0),
-      ifelse(!is.null(response_scale_metrics$county_months_improved_pct), 
-             response_scale_metrics$county_months_improved_pct, 0)
+      metric = c("Average Error\n(MAE)", "Counties\nImproved", "Exact\nPredictions"),
+      improvement = c(
+        ifelse(!is.null(response_scale_metrics$total_mae_improvement), 
+               response_scale_metrics$total_mae_improvement, 0),
+        ifelse(!is.null(response_scale_metrics$county_months_improved_pct), 
+               response_scale_metrics$county_months_improved_pct, 0),
+        ifelse(!is.null(prediction_metrics$exact_predictions), 
+               prediction_metrics$exact_predictions*100, 0)
+      )
     )
-  )
   
   plot4_alt <- ggplot(impact_data, aes(x = metric)) +
     geom_col(aes(y = improvement, fill = metric), alpha = 0.8, width = 0.6) +
@@ -1198,49 +1196,11 @@ if (!exists("plot3")) {
   stop("ERROR: plot3 (Complexity-Performance) not found!")
 }
 
-# Ensure plot4 is the Real-World Impact plot
-if (!exists("plot4") || !exists("plot4_impact")) {
-  cat("Creating Real-World Impact plot\n")
-  
-  # Create the Real-World Impact metrics
-  metrics_data <- data.frame(
-    Metric = c("Average Error\n(MAE)", "Counties\nImproved", "Prediction\nAccuracy"),
-    Value = c(43.8, 52.8, 43.8),  # These should come from your actual metrics
-    Color = c("#8B4789", "#4A9B8E", "#D4A520")
-  )
-  
-  # If we have actual response scale metrics, use them
-  if (exists("response_scale_metrics") && !is.null(response_scale_metrics)) {
-    if (!is.null(response_scale_metrics$improvement_mae_pct)) {
-      metrics_data$Value[1] <- response_scale_metrics$improvement_mae_pct
-    }
-    if (!is.null(response_scale_metrics$counties_improved_pct)) {
-      metrics_data$Value[2] <- response_scale_metrics$counties_improved_pct
-    }
-    if (!is.null(response_scale_metrics$prediction_accuracy_pct)) {
-      metrics_data$Value[3] <- response_scale_metrics$prediction_accuracy_pct
-    }
-  }
-  
-  plot4 <- ggplot(metrics_data, aes(x = Metric, y = Value, fill = Color)) +
-    geom_col(width = 0.7, alpha = 0.9) +
-    geom_text(aes(label = paste0(round(Value, 1), "%")), 
-              vjust = -0.5, size = 4, fontface = "bold") +
-    scale_fill_identity() +
-    scale_y_continuous(limits = c(0, 60), expand = expansion(mult = c(0, 0.1))) +
-    theme_minimal() +
-    labs(title = "Real-World Impact",
-         subtitle = "Practical improvements in opioid death prediction",
-         x = "", 
-         y = "Improvement (%)") +
-    theme(plot.title = element_text(size = 13, face = "bold"),
-          plot.subtitle = element_text(size = 10),
-          axis.text.x = element_text(size = 10),
-          panel.grid.major.x = element_blank())
-  
-  cat("✓ Created Real-World Impact plot\n")
+if (exists("plot4_final")) {
+  plot4 <- plot4_final
+  cat("✓ Using Real-World Impact plot\n")
 } else {
-  cat("✓ Using existing Real-World Impact plot\n")
+  stop("ERROR: plot4_final (Real-World Impact) not found!")
 }
 
 # ==============================================================================
@@ -1331,6 +1291,26 @@ write.csv(best_models_summary,
           paste0("outputs/models/phase6_best_models_summary_", RESPONSE_TYPE, ".csv"),
           row.names = FALSE)
 
+  # Ensure all variables have values before creating data frame
+  interaction_improvement <- ifelse(is.null(interaction_improvement) || is.na(interaction_improvement), 0, interaction_improvement)
+  interaction_pct <- ifelse(is.null(interaction_pct) || is.na(interaction_pct), 0, interaction_pct)
+  total_improvement <- ifelse(is.null(total_improvement) || is.na(total_improvement), 0, total_improvement)
+  total_pct <- ifelse(is.null(total_pct) || is.na(total_pct), 0, total_pct)
+  county_months_improved <- ifelse(is.null(county_months_improved) || is.na(county_months_improved), 0, county_months_improved)
+  evidence_level <- ifelse(is.null(evidence_level) || is.na(evidence_level), "Unknown", evidence_level)
+
+  improvement_summary <- data.frame(
+    Metric = c("Interaction Improvement (WAIC)", "Interaction Improvement (%)", 
+               "Total Improvement (WAIC)", "Total Improvement (%)",
+               "County-months Improved", "Evidence Level", 
+               "Best Model", "Best Model Type"),
+    Value = c(round(interaction_improvement, 1), interaction_pct,
+              round(total_improvement, 1), total_pct,
+              county_months_improved, evidence_level,
+              best_overall$model_name, best_overall$model_type),
+    stringsAsFactors = FALSE
+  )
+
 # Create improvement summary
 improvement_summary <- data.frame(
   Metric = c("Interaction Improvement (WAIC)", "Interaction Improvement (%)", 
@@ -1416,7 +1396,10 @@ summary_text <- paste0(
   "✓ Model type: ", best_overall$model_type, "\n",
   "✓ WAIC: ", round(best_overall$waic, 1), "\n",
   "✓ Complexity score: ", round(best_overall$complexity, 1), "\n",
-  "✓ Runtime: ", round(best_overall$runtime_seconds, 1), " seconds\n\n",
+  "✓ MAE improvement from baseline: ", round(response_scale_metrics$total_mae_improvement, 1), "% (",
+      round(baseline_mae, 2), " → ", round(response_scale_metrics$best_mae, 2), " deaths/county-month)\n",
+  "✓ RMSE improvement from baseline: ", round(response_scale_metrics$total_rmse_improvement, 1), "%\n",
+  "✓ Runtime: ", round(best_overall$runtime_seconds, 1), " seconds (on Apple M1 Max)\n\n",
   
   "MODEL COMPARISON - INTERACTION vs SEPARABLE:\n",
   "✓ Interaction improvement: ", round(abs(interaction_improvement), 1), " WAIC units (", waic_interpretation, ")\n",
@@ -1539,7 +1522,7 @@ files_created <- c(
   "✓ phase6_model_type_comparison.png", 
   "✓ phase6_performance_vs_complexity.png",
   "✓ phase6_evidence_strength.png",
-  "✓ phase6_executive_dashboard_combined.png",
+  "✓ phase6_executive_dashboard.png",
   "✓ phase6_waic_distribution.png",
   "✓ phase6_runtime_vs_performance.png"
 )
@@ -1573,7 +1556,7 @@ cat("\nKey Results Summary:\n")
 cat("• Best ZIP Model:", best_overall$model_name, "(WAIC:", round(best_overall$waic, 1), ")\n")
 cat("• Total Improvement:", round(total_improvement, 1), "WAIC units (", total_pct, "%)\n")
 cat("• Evidence for Interactions:", evidence_level, "\n")
-cat("• County-months improved annually:", county_months_improved, "\n")
+cat("• County-months improved:", county_months_improved, "\n")
 cat("• Model family: Zero-Inflated Poisson (optimal for zero-heavy count data)\n")
 
 if (!is.null(county_summary)) {

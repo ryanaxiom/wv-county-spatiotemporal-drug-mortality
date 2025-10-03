@@ -176,7 +176,6 @@ cat("✓ This will be the size of model$summary.fitted.values\n")
 
 cat("\n--- Step 3: Defining Interaction Model Specifications ---\n")
 
-# Comprehensive interaction model testing for stakeholder confidence
 # Based on Phase 3 results showing AR1 temporal + adjacency/exponential/gaussian spatial perform best
 interaction_models <- list(
   
@@ -559,7 +558,7 @@ extract_interaction_metrics <- function(model_result, model_name) {
       model_type = "interaction",
       complexity_score = model_result$model_spec$complexity_score,
       dic = NA, waic = NA, marginal_likelihood = NA,
-      mean_cpo = NA, failure_rate = NA, runtime_mins = model_result$runtime,
+      mean_cpo = NA, failure_rate = NA, runtime_seconds = model_result$runtime,
       fit_success = FALSE,
       stringsAsFactors = FALSE
     ))
@@ -587,7 +586,7 @@ extract_interaction_metrics <- function(model_result, model_name) {
     marginal_likelihood = model$mlik[1],
     mean_cpo = mean_cpo,
     failure_rate = failure_rate,
-    runtime_mins = model_result$runtime,
+    runtime_seconds = model_result$runtime,
     fit_success = TRUE,
     stringsAsFactors = FALSE
   )
@@ -605,10 +604,10 @@ separable_metrics <- phase3_results$comparison_metrics %>%
   filter(fit_success == TRUE) %>%
   arrange(waic) %>%
   mutate(
-    runtime_mins = runtime / 60  # Only convert runtime, don't touch model_type
+    runtime_seconds = runtime  # Only convert runtime, don't touch model_type
   ) %>%
   select(model_name, model_type, complexity_score, dic, waic, marginal_likelihood, 
-         mean_cpo, failure_rate, runtime_mins, fit_success)
+         mean_cpo, failure_rate, runtime_seconds, fit_success)
 
 # Combine all models
 all_models_comparison <- rbind(
@@ -722,13 +721,13 @@ if (nrow(best_interaction) > 0) {
     } else {
       cat("  MAE/RMSE: Could not calculate (fitted values unavailable)\n")
     }
-    cat("  Runtime cost:", round(best_interaction$runtime_mins / best_separable$runtime_mins, 1), "x longer than separable\n")
+    cat("  Runtime cost:", round(best_interaction$runtime_seconds / best_separable$runtime, 1), "x longer than separable\n")
   } else {
     cat("  Separable models perform equally well or better\n")
   }
   
   # Scientific conclusion about separability
-  if (interaction_improvement < 10) {
+  if (interaction_improvement < 7) {
     cat("\n*** SEPARABILITY IS BETTER ***\n")
     cat("Interaction improvement (", round(interaction_improvement, 1), 
         "WAIC units) is minimal, confirming that:\n")

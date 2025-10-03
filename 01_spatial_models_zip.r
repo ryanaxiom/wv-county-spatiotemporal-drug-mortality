@@ -241,7 +241,6 @@ fit_spatial_model <- function(model_spec, train_data, model_name) {
     matrix_name <- paste0("Q_", gsub("[^a-zA-Z]", "", tolower(model_name)))
     assign(matrix_name, model_spec$precision_matrix, envir = .GlobalEnv)
     
-    # Update formula to use the correct matrix name
     model_spec$formula_parts$random <- gsub("Q_\\w+", matrix_name, model_spec$formula_parts$random)
   }
   

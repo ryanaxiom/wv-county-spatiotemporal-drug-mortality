@@ -488,11 +488,11 @@ extract_county_temporal_effects <- function(model_result, model_name) {
   # Check the actual hyperparameter name and value
   print(model$summary.hyperpar)
 
-  # Get fitted values (these intervals are WRONG - based on pooled sample size)
+  # Get fitted values (these intervals are based on pooled sample size which is not appropriate for county level variance prediction)
   fitted_summary <- model$summary.fitted.values
   fitted_mean <- fitted_summary$mean
-  fitted_lower_pooled <- fitted_summary$`0.025quant`
-  fitted_upper_pooled <- fitted_summary$`0.975quant`
+  fitted_lower_default <- fitted_summary$`0.025quant`
+  fitted_lower_default <- fitted_summary$`0.975quant`
   
   cat("  Processing", model_name, "- adapting intervals...\n")
   
@@ -560,23 +560,23 @@ extract_county_temporal_effects <- function(model_result, model_name) {
     total_var <- lambda + total_uncertainty
     total_sd <- sqrt(total_var)
     
-	# # Uncomment for rate-adaptive intervals of some kind
-	#     if (lambda < 0.5) {
-	#       # Very rare events: use ZIP quantiles
-	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
-	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
-	#     } else if (lambda < 2) {
-	#       # Low rates: ZIP quantiles
-	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
-	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
-	#     } else {
-	#       # Higher rates: still use ZIP (not normal approximation since we have ZIP model)
-	#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
-	#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
-	#     }
-	
-	# Calculate proper ZIP intervals for each observation
-    # Use consistent 95% credible intervals for all rate levels
+# Uncomment below to implement rate-adaptive intervals with custom thresholds rate-adaptive intervals and set your own requirements
+#     if (lambda < 0.5) {
+#       # Very rare events: use ZIP quantiles
+#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+#     } else if (lambda < 2) {
+#       # Low rates: ZIP quantiles
+#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+#     } else {
+#       # Higher rates: still use ZIP (not normal approximation since we have ZIP model)
+#       proper_lower[i] <- qzip(0.025, lambda, zero_prob)
+#       proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
+#     }
+
+# Calculate ZIP intervals for each observation
+# Use consistent 95% credible intervals for all rate levels
     proper_lower[i] <- qzip(0.025, lambda, zero_prob)
     proper_upper[i] <- qzip(0.975, lambda + sqrt(total_uncertainty), zero_prob)
   }
@@ -586,11 +586,11 @@ extract_county_temporal_effects <- function(model_result, model_name) {
   proper_upper <- round(proper_upper)
   
   # Report interval width comparison
-  mean_wrong_width <- mean(fitted_upper_pooled - fitted_lower_pooled)
+  mean_pooled_width <- mean(fitted_lower_default - fitted_lower_default)
   mean_proper_width <- mean(proper_upper - proper_lower)
-  cat("    Original incorrect interval width from R-INLA:", round(mean_wrong_width, 2), "\n")
-  cat("    Calibrated credible interval width:", round(mean_proper_width, 2), "\n")
-  cat("    Mean increased width factor:", round(mean_proper_width / mean_wrong_width, 1), "x\n")
+  cat("    R-INLA pooled credible interval width:", round(mean_pooled_width, 2), "\n")
+  cat("    County-specific credible interval width:", round(mean_proper_width, 2), "\n")
+  cat("    Mean increased width factor:", round(mean_proper_width / mean_pooled_width, 1), "x\n")
   
   # Select sample counties for visualization
   sample_counties <- unique(train_county_temporal$Residence_County)[1:6]
@@ -603,18 +603,18 @@ extract_county_temporal_effects <- function(model_result, model_name) {
       fitted_mean = fitted_mean[1:n()],
       fitted_lower = proper_lower[1:n()],
       fitted_upper = proper_upper[1:n()],
-      fitted_lower_pooled = fitted_lower_pooled[1:n()],  # Keep for comparison
-      fitted_upper_pooled = fitted_upper_pooled[1:n()],
+      fitted_lower_default = fitted_lower_default[1:n()],  # Keep for comparison
+      fitted_lower_default = fitted_lower_default[1:n()],
       model_name = model_name
     )
   
   # Calculate coverage with credible intervals
   coverage <- mean(effects_data$distinct_patient_count >= effects_data$fitted_lower & 
                    effects_data$distinct_patient_count <= effects_data$fitted_upper, na.rm = TRUE)
-  coverage_wrong <- mean(effects_data$distinct_patient_count >= effects_data$fitted_lower_pooled & 
-                        effects_data$distinct_patient_count <= effects_data$fitted_upper_pooled, na.rm = TRUE)
+  coverage_inla <- mean(effects_data$distinct_patient_count >= effects_data$fitted_lower_default & 
+                        effects_data$distinct_patient_count <= effects_data$fitted_lower_default, na.rm = TRUE)
   
-  cat("    Coverage (pooled intervals):", round(coverage_wrong * 100, 1), "%\n")
+  cat("    Coverage (pooled intervals):", round(coverage_inla * 100, 1), "%\n")
   cat("    Coverage (county credible intervals):", round(coverage * 100, 1), "%\n\n")
   
   return(effects_data)

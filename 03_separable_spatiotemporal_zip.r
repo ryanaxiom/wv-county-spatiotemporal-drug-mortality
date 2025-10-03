@@ -262,20 +262,20 @@ if (parallel_env$type == "mclapply") {
   }, mc.cores = parallel_env$cores)
 } else {
   # Windows
-clusterEvalQ(parallel_env$cluster, {
-  library(INLA)
-  library(dplyr)
-  source("00_model_utilities.r")
-})
+  clusterEvalQ(parallel_env$cluster, {
+    library(INLA)
+    library(dplyr)
+    source("00_model_utilities.r")
+  })
 
-clusterExport(parallel_env$cluster, c("train_data", "precision_matrices", "CONFIG", 
-                                      "fit_spatiotemporal_model", "models_by_complexity",
-                                      "create_spatiotemporal_formula"))  # Correct name
-
-spatiotemporal_results <- parLapply(parallel_env$cluster, names(models_by_complexity), function(model_name) {
-  model_spec <- models_by_complexity[[model_name]]
-  fit_spatiotemporal_model(model_spec, train_data, model_name)
-})
+  clusterExport(parallel_env$cluster, c("train_data", "precision_matrices", "CONFIG", 
+                                        "fit_spatiotemporal_model", "models_by_complexity",
+										"fit_spatiotemporal_","create_spatiotemporal_formula"))
+  
+  spatiotemporal_results <- parLapply(parallel_env$cluster, names(models_by_complexity), function(model_name) {
+    model_spec <- models_by_complexity[[model_name]]
+    fit_spatiotemporal_model(model_spec, train_data, model_name)
+  })
 
 cat("Starting", length(models_by_complexity), "models...\n")
 completed <- 0
@@ -286,7 +286,7 @@ for (result in models_by_complexity) {
 }
 cat("\n")
 
-# Report model fit times
+  # Report model fit times
 for (i in seq_along(spatiotemporal_results)) {
   result <- spatiotemporal_results[[i]]
   model_name <- names(models_by_complexity)[i]
@@ -296,8 +296,8 @@ for (i in seq_along(spatiotemporal_results)) {
     cat("✗", model_name, "FAILED\n")
   }
 }
-
-stopCluster(parallel_env$cluster)
+  
+  stopCluster(parallel_env$cluster)
 
 }
 
@@ -534,7 +534,7 @@ if (nrow(best_temporal_only) > 0 && nrow(best_spatial_only) > 0) {
 
 cat("\n--- Step 6: Creating Visualizations ---\n")
 
-# DIAGNOSTIC: Verify data before plotting
+# Verify data before plotting
 cat("Data check before plotting:\n")
 cat("  adjacency_ar1 WAIC in comparison_metrics:", 
     comparison_metrics$waic[comparison_metrics$model_name == "adjacency_ar1"], "\n")
@@ -556,7 +556,7 @@ if (any(duplicated(comparison_metrics$model_name))) {
 
 # 1. Model component heatmap (green/brown/red style)
 if (successful_fits > 10) {
-# Create improved heatmap data with better WAIC scaling
+# Create heatmap data with better WAIC scaling
 heatmap_data <- comparison_metrics %>%
   group_by(spatial_component, temporal_component) %>%
   summarise(

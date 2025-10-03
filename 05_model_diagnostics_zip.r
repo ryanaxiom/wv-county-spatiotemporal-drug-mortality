@@ -210,17 +210,6 @@ all_metrics <- list()
 for (phase_name in names(phase_results)) {
   cat("\nProcessing", phase_name, "\n")
   
-  # Check what's in this phase result
-  if ("comparison_metrics" %in% names(phase_results[[phase_name]])) {
-    cat("  - Found comparison_metrics\n")
-  }
-  if ("all_models_comparison" %in% names(phase_results[[phase_name]])) {
-    cat("  - Found all_models_comparison\n")
-  }
-  if ("models" %in% names(phase_results[[phase_name]])) {
-    cat("  - Found models object with", length(phase_results[[phase_name]]$models), "models\n")
-  }
-  
   phase_metrics <- extract_metrics(phase_results[[phase_name]], phase_name)
   all_metrics[[phase_name]] <- phase_metrics
   
@@ -231,12 +220,6 @@ cat("\n✓ Successfully extracted metrics from", length(all_metrics), "phases\n"
 if (length(all_metrics) == 0) {
   cat("✗ ERROR: No model metrics could be extracted from phase results.\n")
   stop("Cannot proceed without model metrics.")
-}
-
-# Show column structure before combining
-cat("\nColumn structure before rbind:\n")
-for (phase_name in names(all_metrics)) {
-  cat(phase_name, ":", paste(names(all_metrics[[phase_name]]), collapse=", "), "\n")
 }
 
 combined_metrics <- do.call(rbind, all_metrics)
@@ -358,36 +341,10 @@ if (best_phase == "Phase 4") {
   }
 }
 
-if (is.null(best_model) || !inherits(best_model, "inla")) {
-  cat("\n✗ ERROR: Could not find the fitted INLA model object\n")
-  cat("Phase results structure:\n")
-  
-  # Show what's actually in the phase results for debugging
-  for (ph in names(phase_results)) {
-    cat("\n", ph, "structure:\n")
-    cat("  Top-level objects:", paste(names(phase_results[[ph]]), collapse=", "), "\n")
-    
-    if ("interaction_results" %in% names(phase_results[[ph]])) {
-      cat("  Models in interaction_results:", 
-          paste(names(phase_results[[ph]]$interaction_results), collapse=", "), "\n")
-    }
-    if ("model_fits" %in% names(phase_results[[ph]])) {
-      cat("  Models in model_fits:", 
-          paste(names(phase_results[[ph]]$model_fits), collapse=", "), "\n")
-    }
-    if ("spatiotemporal_results" %in% names(phase_results[[ph]])) {
-      cat("  Models in spatiotemporal_results:", 
-          paste(names(phase_results[[ph]]$spatiotemporal_results), collapse=", "), "\n")
-    }
-  }
-  
-  stop("Best model not available or invalid. Check the diagnostic output above.")
-}
-
 cat("✓ Loaded fitted model:", best_model_name, "\n")
 cat("✓ Model class:", class(best_model)[1], "\n")
 
-# Debug model structure
+# Verify model structure
 cat("✓ Model family:", best_model$.args$family, "\n")
 cat("✓ Has fitted values:", !is.null(best_model$summary.fitted.values), "\n")
 if (!is.null(best_model$summary.fitted.values)) {
@@ -400,7 +357,7 @@ cat("\n")
 # 5. PREPARE DATA EXACTLY MATCHING PHASE 04 BASED ON PHASE 00
 # ==============================================================================
 
-cat("--- Step 5: Preparing Data Matching Phase 04 ---\n")
+cat("--- Step 5: Preparing Data ---\n")
 
 # Load the same splits that Phase 04 used
 # These come from the splits in Phase 00
@@ -985,7 +942,7 @@ diagnostic_summary <- data.frame(
     sum(county_fit_stats$rate_category == "High"),
     sum(county_fit_stats$rate_category == "Low")
   ),
-  row.names = NULL,  # Prevents row names warning
+  row.names = NULL,
   stringsAsFactors = FALSE
 )
 
@@ -1025,15 +982,15 @@ report_lines <- c(
   "",
   "PREDICTION PERFORMANCE (COUNTY-LEVEL CREDIBLE INTERVALS)",
   "-" %.% 40,
-  paste("INLA intervals coverage (incorrectly uses full sample size):", round(inla_coverage * 100, 1), "%"),
-  paste("Correct county credible interval true coverage:", round(proper_coverage * 100, 1), "%"),
+  paste("INLA pooled interval coverage:", round(inla_coverage * 100, 1), "%"),
+  paste("County-specific credible interval coverage:", round(proper_coverage * 100, 1), "%"),
   paste("Overall RMSE:", round(rmse, 3)),
   paste("Overall MAE:", round(mae, 3)),
   paste("Average County Coverage:", round(mean(county_fit_stats$coverage_95) * 100, 1), "%"),
   "",
-  "SAMPLE SIZE CORRECTION SUMMARY",
+  "SAMPLE SIZE ADAPTATION SUMMARY",
   "-" %.% 40,
-  paste("INLA assumes sample size:", nrow(train_data), "(pooled dataset size)"),
+  paste("INLA assumes sample sizze:", nrow(train_data)),
   paste("Correct county sample size:", "~102 time points per county"),
   paste("Method used: Random effects uncertainty extraction"),
   paste("Coverage improvement:", round((proper_coverage - inla_coverage) * 100, 1), "percentage points"),
@@ -1063,10 +1020,8 @@ cat("✓ Saved comprehensive analysis report\n\n")
 cat("--- Step 13: Cross-Validation and Prediction Metrics ---\n")
 
 # Calculate additional prediction metrics using existing variables
-inla_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower_wrong & 
-                     predictions_df$observed <= predictions_df$fitted_upper_wrong, na.rm = TRUE)
-calibrated_coverage <- mean(predictions_df$observed >= predictions_df$fitted_lower & 
-                           predictions_df$observed <= predictions_df$fitted_upper, na.rm = TRUE)
+
+calibrated_coverage <- proper_coverage
 
 prediction_metrics <- list(
   mae = mae,
@@ -1084,12 +1039,12 @@ prediction_metrics <- list(
   mean_inla_width = mean(predictions_df$fitted_upper_inla - predictions_df$fitted_lower_inla)
 )
 
-cat("✓ Final prediction metrics (calibrated intervals):\n")
+cat("✓ Final prediction metrics:\n")
 cat("  MAE:", round(prediction_metrics$mae, 3), "\n")
 cat("  RMSE:", round(prediction_metrics$rmse, 3), "\n")
 cat("  MAPE:", round(prediction_metrics$mape, 1), "%\n")
-cat("  Proper 95% Credible Interval Coverage (using county sample size and estimated covariance):", round(prediction_metrics$coverage_95_calibrated * 100, 1), "%\n")
-cat("  95% Credible Coverage Coverage (from INLA which uses wrong sample size):", round(prediction_metrics$coverage_95_inla * 100, 1), "%\n")
+cat("  County-specific 95% Credible Interval Coverage:", round(prediction_metrics$coverage_95_calibrated * 100, 1), "%\n")
+cat("  95% Credible Coverage Coverage (default from INLA):", round(prediction_metrics$coverage_95_inla * 100, 1), "%\n")
 cat("  Coverage improvement:", round(prediction_metrics$coverage_improvement * 100, 1), "percentage points\n")
 cat("  Correlation:", round(prediction_metrics$correlation, 3), "\n")
 cat("  Exact predictions:", round(prediction_metrics$exact_predictions * 100, 1), "%\n")
@@ -1151,8 +1106,8 @@ if (!is.null(state_model) && !is.null(state_model$summary.fitted.values)) {
 
   cat("✓ State-level model fitted successfully\n")
   cat("  State WAIC:", round(state_model$waic$waic, 1), "\n")
-  cat("  CORRECT method: Using state model's summary.fitted.values directly\n")
-  cat("  State-level sample size:", nrow(state_training_data), "time points (CORRECT)\n")
+  cat("  Correct method for state-level intervals: Using state model's summary.fitted.values directly\n")
+  cat("  State-level sample size:", nrow(state_training_data), "time points\n")
   cat("  State coverage:", round(state_coverage * 100, 1), "%\n")
 
 } else {
