@@ -1,0 +1,37 @@
+==============================================================================
+COMPREHENSIVE ANALYSIS REPORT - OPIOID DEATHS
+Generated: 2025-10-03
+==============================================================================
+
+MODEL SELECTION SUMMARY
+----------------------------------------
+Best Overall Model: adjacency_ar1_period
+Model Phase: Phase 4
+WAIC: 10935.3
+DIC: 10925.8
+Model Type: interaction
+
+PREDICTION PERFORMANCE (COUNTY-LEVEL CREDIBLE INTERVALS)
+----------------------------------------
+INLA pooled interval coverage: 11.9 %
+County-specific credible interval coverage: 99.1 %
+Overall RMSE: 1.039
+Overall MAE: 0.651
+Average County Coverage: 99.1 %
+
+SAMPLE SIZE ADAPTATION SUMMARY
+----------------------------------------
+INLA assumes sample sizze: 5610
+Correct county sample size: ~102 time points per county
+Method used: Random effects uncertainty extraction
+Coverage improvement: 87.1 percentage points
+
+COUNTY-LEVEL SUMMARY
+----------------------------------------
+Total Counties: 55
+Excellent Fit: 51
+Good Fit: 4
+Adequate Fit: 0
+Poor Fit: 0
+
+==============================================================================
