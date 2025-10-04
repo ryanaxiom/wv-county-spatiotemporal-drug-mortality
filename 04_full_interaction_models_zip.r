@@ -1,14 +1,13 @@
 # ==============================================================================
-# File 04: Full Spatiotemporal Interaction Models (STANDALONE VERSION)
+# File 04: Full Spatiotemporal Interaction Models
 # ==============================================================================
 # This file loads previous results and develops non-separable interaction models
-# STANDALONE - loads all required data from saved results without re-running phases
 #
-# DEVELOPMENT PHASE 4: Full Spatiotemporal Interaction Models
-# - Load all previous phase results efficiently  
+#   PHASE 4: Full Spatiotemporal Interaction Models
+# - Load all previous phase results efficiently
 # - Focus on most promising interactions (AR1-based from Phase 3)
 # - Remove problematic arbitrary regional grouping
-# - Compare computational cost vs minimal performance benefit using ZIP
+# - Compare computational cost vs performance benefit using ZIP
 # - Confirm separability conclusion from Phase 3
 # ==============================================================================
 
@@ -49,7 +48,7 @@ setup_parallel <- function(n_cores = NULL) {
 RESPONSE_TYPE <- Sys.getenv("ANALYSIS_RESPONSE_TYPE", unset = "opioid")
 PARALLEL <- as.logical(Sys.getenv("ANALYSIS_PARALLEL", unset = "TRUE"))
 
-cat("=== PHASE 4: FULL SPATIOTEMPORAL INTERACTION MODELS (STANDALONE) ===\n")
+cat("=== PHASE 4: FULL SPATIOTEMPORAL INTERACTION MODELS ===\n")
 cat("Response variable:", RESPONSE_TYPE, "\n")
 cat("Loading saved results from previous phases...\n\n")
 
@@ -62,7 +61,7 @@ if (PARALLEL) {
 # 1. LOAD ALL REQUIRED DATA FROM PHASE 00 SPLITS
 # ==============================================================================
 
-cat("--- Step 1: Loading Required Data from Fixed Phase 00 ---\n")
+cat("--- Step 1: Loading Required Data from Phase 00 ---\n")
 
 # Function to safely load required files
 safe_load_required <- function(filename, description) {

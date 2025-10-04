@@ -3,7 +3,7 @@
 # ==============================================================================
 # This file develops and compares different temporal model structures using R-INLA
 #
-# DEVELOPMENT PHASE 2: Temporal Model Development
+#   PHASE 2: Temporal Model Development
 # - AR(1) temporal correlation models
 # - Random walk smoothing (RW1, RW2) for temporal trends
 # - Seasonal/cyclical components (yearly patterns)

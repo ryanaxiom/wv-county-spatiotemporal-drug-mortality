@@ -1,10 +1,11 @@
 # ==============================================================================
 # File 02a: County-Level Temporal Model Development
 # ==============================================================================
-# This file develops temporal models applied to the full county-time data structure
-# for proper county-level prediction, complementing Phase 2's state-level analysis
+# This file develops temporal models applied to the full county-time
+# data structure for proper county-level prediction
+# This complements Phase 2's state-level analysis
 #
-# DEVELOPMENT PHASE 2a: County-Level Temporal Model Development
+#   PHASE 2a: County-Level Temporal Model Development
 # - Apply temporal structures to full county-time data
 # - Test global temporal effects applied to all counties simultaneously using ZIP
 # - Compare county-level temporal model performance

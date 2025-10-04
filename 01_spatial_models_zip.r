@@ -3,7 +3,7 @@
 # ==============================================================================
 # This file develops and compares different spatial model structures using R-INLA
 #
-# DEVELOPMENT PHASE 1: Spatial Model Development
+#   PHASE 1: Spatial Model Development
 # - Binary adjacency spatial models (Queen/Rook contiguity)
 # - Distance-weighted spatial models (exponential/Gaussian decay)
 # - Multiple precision matrix formulations and spatial random effects

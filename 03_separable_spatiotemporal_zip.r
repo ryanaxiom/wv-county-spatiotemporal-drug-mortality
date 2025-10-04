@@ -1,12 +1,14 @@
 # ==============================================================================
 # File 03: Separable Spatiotemporal Model Development
 # ==============================================================================
-# This file develops separable spatiotemporal models combining spatial and temporal effects
+# This file develops separable spatiotemporal models
+# combining spatial and temporal effects
 #
-# DEVELOPMENT PHASE 3: Separable Spatiotemporal Models
-# - Combine all spatial + temporal effect combinations (5 × 10 = 50+ models)
-# - Test separable (additive) space × time interactions
-# - Compare computational efficiency vs pure spatial/temporal models
+#   PHASE 3: Separable Spatiotemporal Models
+# - Combine all 9 spatial + 5 temporal effect combinations except none_none
+#   (5 × 9 - 1 = 44 models)
+# - Test separable (additive) space & time combinations (no interactions)
+# - Compare computational efficiency vs pure spatiotemporal models
 # - Assess improvement from combining spatial and temporal structure using ZIP
 # - Include model complexity considerations for practical decision-making
 # ==============================================================================
@@ -269,8 +271,7 @@ if (parallel_env$type == "mclapply") {
   })
 
   clusterExport(parallel_env$cluster, c("train_data", "precision_matrices", "CONFIG", 
-                                        "fit_spatiotemporal_model", "models_by_complexity",
-										"fit_spatiotemporal_","create_spatiotemporal_formula"))
+                                        "fit_spatiotemporal_model", "models_by_complexity","create_spatiotemporal_formula"))
   
   spatiotemporal_results <- parLapply(parallel_env$cluster, names(models_by_complexity), function(model_name) {
     model_spec <- models_by_complexity[[model_name]]
@@ -424,7 +425,7 @@ cat("Best simple model (≤2 complexity):", best_simple$model_name, "(WAIC =", r
 cat("Best parsimony (complexity-adjusted):", best_parsimony$model_name, "(WAIC =", round(best_parsimony$waic, 1), 
     ", Complexity =", best_parsimony$complexity_score, ")\n")
 
-# Compare with individual models on same data structure
+# Compare with individual models
 # Find temporal-only and spatial-only models from our results
 temporal_only_models <- comparison_metrics %>% filter(spatial_component == "none")
 spatial_only_models <- comparison_metrics %>% filter(temporal_component == "none")
@@ -437,7 +438,7 @@ if (nrow(best_temporal_only) > 0 && nrow(best_spatial_only) > 0) {
   temporal_improvement <- best_temporal_only$waic - best_overall$waic
   spatial_improvement <- best_spatial_only$waic - best_overall$waic
   
-  cat("\nMeaningful improvement analysis (same dataset comparisons):\n")
+  cat("\nMeaningful improvement analysis:\n")
   cat("Best temporal-only model:", best_temporal_only$model_name, "WAIC =", round(best_temporal_only$waic, 1), "\n")
   cat("Best spatial-only model:", best_spatial_only$model_name, "WAIC =", round(best_spatial_only$waic, 1), "\n")
   cat("Best combined model:", best_overall$model_name, "WAIC =", round(best_overall$waic, 1), "\n")

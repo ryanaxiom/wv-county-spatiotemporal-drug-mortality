@@ -3,11 +3,12 @@
 # ==============================================================================
 # This file provides comprehensive diagnostics across all modeling phases
 #
-# DEVELOPMENT PHASE 5: Enhanced Model Diagnostics & County Analysis
+#   PHASE 5: Enhanced Model Diagnostics & County Analysis
 # - Load all phase results efficiently
-# - Comprehensive model comparison with proper WAIC interpretation
-# - Proper ZIP uncertainty quantification with appropriate credible intervals
-# - County-level prediction analysis with appropriate 95% credible intervals
+# - Comprehensive model comparison with WAIC interpretation
+# - ZIP uncertainty quantification for county-level credible intervals
+# - County-level prediction analysis with 95% credible intervals
+# - State-level prediction analysis with 95% credible intervals
 # - Individual county plots and grid visualizations
 # - Export publication-ready summary tables and county analysis
 # ==============================================================================
@@ -37,7 +38,7 @@ RESPONSE_TYPE <- Sys.getenv("ANALYSIS_RESPONSE_TYPE", unset = "opioid")
 
 cat("=== PHASE 5: COMPREHENSIVE MODEL DIAGNOSTICS & COUNTY ANALYSIS ===\n")
 cat("Response variable:", RESPONSE_TYPE, "\n")
-cat("Proper ZIP uncertainty quantification\n\n")
+cat("ZIP uncertainty quantification\n\n")
 
 # ==============================================================================
 # 1. LOAD ALL PHASE RESULTS AND DATA
@@ -272,7 +273,8 @@ equivalent_models <- combined_metrics %>%
   filter(within_3_waic) %>%
   arrange(waic)
 
-cat("✓ Models with equivalent performance (within 3 WAIC units):", nrow(equivalent_models), "\n")
+cat("✓ Models with equivalent performance (within 3 WAIC units):",
+   nrow(equivalent_models), "\n")
 if (nrow(equivalent_models) > 1) {
   cat("  These models have statistically equivalent performance:\n")
   for (i in 1:min(5, nrow(equivalent_models))) {
@@ -354,7 +356,7 @@ if (!is.null(best_model$summary.fitted.values)) {
 cat("\n")
 
 # ==============================================================================
-# 5. PREPARE DATA EXACTLY MATCHING PHASE 04 BASED ON PHASE 00
+# 5. PREPARE DATA BASED ON PHASE 00
 # ==============================================================================
 
 cat("--- Step 5: Preparing Data ---\n")
@@ -369,7 +371,8 @@ if (RESPONSE_TYPE == "opioid") {
 
 cat("✓ Loaded current data splits from Phase 00\n")
 cat("✓ Training data size:", nrow(data_splits_current$train), "observations\n")
-cat("✓ Holdout configuration:", data_splits_current$validation_config$holdout_months, "months\n")
+cat("✓ Holdout configuration:",
+    data_splits_current$validation_config$holdout_months, "months\n")
 
 # RECREATE THE EXACT SAME DATA PREPARATION FROM PHASE 04
 # This must match exactly to what was used to fit the best model
@@ -379,20 +382,21 @@ train_data <- data_splits_current$train %>%
     # Basic indices (exactly matching Phase 04)
     spatial_id = match(Residence_County, precision_matrices$county_names),
     time_numeric = as.numeric(time_id),
-    
+
     # Create interaction indices for space-time models (from Phase 04)
     space_time_idx = (spatial_id - 1) * max(time_id) + time_id,
-    
+
     # Create duplicate spatial indices for INLA (from Phase 04)
     spatial_id2 = spatial_id,
     spatial_id3 = spatial_id,
-    
+
     # Period groupings matching Phase 04 with 6-month holdout
     max_train_time = max(time_id),
-    pre_intervention_period = ifelse(time_id <= 60, 1, 0),   # Jan 2015 - Dec 2019 
-    implementation_period = ifelse(time_id > 60 & time_id <= 96, 1, 0),  # Jan 2020 - Dec 2022 
-    assessment_period = ifelse(time_id > 96, 1, 0),          # Jan 2023 onwards
-    
+    pre_intervention_period = ifelse(time_id <= 60, 1, 0), # Jan 2015 - Dec 2019
+    implementation_period = ifelse(time_id > 60 &
+                                     time_id <= 96, 1, 0), # Jan 2020 - Dec 2022
+    assessment_period = ifelse(time_id > 96, 1, 0),        # Jan 2023 onwards
+
     # Seasonal indicators (from Phase 4)
     season = case_when(
       month(date) %in% c(12, 1, 2) ~ "winter",
@@ -408,14 +412,17 @@ cat("✓ Recreated Phase 4 data structure exactly\n")
 cat("✓ Training data:", nrow(train_data), "observations\n")
 cat("✓ Counties:", length(unique(train_data$spatial_id)), "\n")
 cat("✓ Time points:", length(unique(train_data$time_id)), "\n")
-cat("✓ Time range: time_id", min(train_data$time_id), "to", max(train_data$time_id), "\n")
+cat("✓ Time range: time_id", min(train_data$time_id),
+  "to", max(train_data$time_id), "\n")
 cat("✓ Date range:", min(train_data$date), "to", max(train_data$date), "\n")
 
 # Verification: Check assessment period learning
 assessment_in_train <- sum(train_data$assessment_period == 1, na.rm = TRUE)
 cat("\nPeriod interaction verification:\n")
-cat("✓ Pre-intervention period observations:", sum(train_data$pre_intervention_period == 1), "\n")
-cat("✓ Implementation period observations:", sum(train_data$implementation_period == 1), "\n")
+cat("✓ Pre-intervention period observations:",
+  sum(train_data$pre_intervention_period == 1), "\n")
+cat("✓ Implementation period observations:",
+  sum(train_data$implementation_period == 1), "\n")
 cat("✓ Assessment period observations:", assessment_in_train, "\n")
 
 if (assessment_in_train > 0) {
@@ -432,7 +439,7 @@ if (!is.null(best_model$summary.fitted.values)) {
   cat("\nDimension verification:\n")
   cat("✓ Training data prepared:", nrow(train_data), "observations\n")
   cat("✓ Model fitted values:", n_fitted_values, "observations\n")
-  
+
   if (nrow(train_data) == n_fitted_values) {
     cat("✓ SUCCESS: Dimensions match perfectly\n")
   } else {
@@ -445,8 +452,10 @@ if (!is.null(best_model$summary.fitted.values)) {
 
 # Additional diagnostics
 cat("\nAdditional verification:\n")
-cat("✓ Spatial counties available:", length(precision_matrices$county_names), "\n")
-cat("✓ Counties in training data:", length(unique(train_data$Residence_County)), "\n")
+cat("✓ Spatial counties available:",
+    length(precision_matrices$county_names), "\n")
+cat("✓ Counties in training data:",
+    length(unique(train_data$Residence_County)), "\n")
 cat("✓ All spatial counties in training:", 
     all(precision_matrices$county_names %in% train_data$Residence_County), "\n")
 
@@ -465,8 +474,8 @@ if (!is.null(best_model$summary.fitted.values)) {
   fitted_lower_inla <- fitted_summary$`0.025quant`
   fitted_upper_inla <- fitted_summary$`0.975quant`
   
-  # Generate posterior samples to properly account for all correlations
-  cat("Generating posterior samples for proper prediction intervals...\n")
+  # Generate posterior samples to account for all correlations
+  cat("Generating posterior samples for county prediction intervals...\n")
   
   # Request posterior samples from INLA
   n_samples <- 5000
@@ -515,7 +524,7 @@ if (.Platform$OS.type == "unix") {
   prediction_quantiles <- do.call(cbind, prediction_quantiles)
 
 } else {
-  # Windows - use parLapply
+  # Windows - uses parLapply
   cat("  Using", n_cores, "cores (parLapply)\n")
   cl <- makeCluster(n_cores)
   clusterExport(cl, c("posterior_samples", "CONFIG", "fitted_mean"))
@@ -551,12 +560,12 @@ cat("  Processed", n_samples, "samples using", n_cores, "cores\n")
 # Calculate prediction intervals from samples
 cat("Calculating prediction intervals from posterior samples...\n")
   
-  proper_lower <- apply(prediction_quantiles, 1, quantile, probs = 0.025, na.rm = TRUE)
-  proper_upper <- apply(prediction_quantiles, 1, quantile, probs = 0.975, na.rm = TRUE)
+  county_lower <- apply(prediction_quantiles, 1, quantile, probs = 0.025, na.rm = TRUE)
+  county_upper <- apply(prediction_quantiles, 1, quantile, probs = 0.975, na.rm = TRUE)
   
   # Calculate coverage
-  coverage <- mean(train_data$distinct_patient_count >= proper_lower & 
-                  train_data$distinct_patient_count <= proper_upper, na.rm = TRUE)
+  coverage_county <- mean(train_data$distinct_patient_count >= county_lower & 
+                  train_data$distinct_patient_count <= county_upper, na.rm = TRUE)
   
 # Diagnostic: Analyze coverage by count level
   cat("\n  Coverage analysis by count level:\n")
@@ -567,8 +576,8 @@ cat("Calculating prediction intervals from posterior samples...\n")
                      labels = c("0", "1", "2", "3-5", "6-10", ">10"))
 
   coverage_by_count <- tapply(
-    train_data$distinct_patient_count >= proper_lower & 
-    train_data$distinct_patient_count <= proper_upper,
+    train_data$distinct_patient_count >= county_lower & 
+    train_data$distinct_patient_count <= county_upper,
     count_groups,
     mean
   )
@@ -581,19 +590,19 @@ cat("Calculating prediction intervals from posterior samples...\n")
 
   # Check if high coverage is driven by zeros
   zero_coverage <- mean((train_data$distinct_patient_count == 0) & 
-                        (proper_lower == 0))
+                        (county_lower == 0))
   cat("    Zero inflation impact: ", round(sum(train_data$distinct_patient_count == 0)), 
       " zeros (", round(zero_coverage * 100, 1), "% have lower bound = 0)\n", sep="")
   
   cat("\n✓ Posterior predictive intervals:\n")
   cat("  - Method: Full posterior sampling (accounts for all correlations)\n")
   cat("  - Number of samples:", n_samples, "\n")
-  cat("  - Coverage achieved:", round(coverage * 100, 1), "%\n")
-  cat("  - Mean interval width:", round(mean(proper_upper - proper_lower), 2), "\n")
+  cat("  - Coverage achieved:", round(coverage_county * 100, 1), "%\n")
+  cat("  - Mean interval width:", round(mean(county_upper - county_lower), 2), "\n")
   
   # Round to integers (counts must be whole numbers)
-  proper_lower <- round(proper_lower)
-  proper_upper <- round(proper_upper)
+  county_lower <- round(county_lower)
+  county_upper <- round(county_upper)
 
   
   # Create predictions dataframe
@@ -604,8 +613,8 @@ cat("Calculating prediction intervals from posterior samples...\n")
     date = as.Date(paste0(train_data$year_month, "-01")),
     observed = train_data$distinct_patient_count,
     fitted_mean = fitted_mean,
-    fitted_lower = proper_lower,
-    fitted_upper = proper_upper,
+    fitted_lower = county_lower,
+    fitted_upper = county_upper,
     fitted_lower_inla = fitted_lower_inla,  # Renamed for clarity
     fitted_upper_inla = fitted_upper_inla,  # Renamed for clarity
     population = train_data$population,
@@ -616,9 +625,7 @@ cat("Calculating prediction intervals from posterior samples...\n")
   # Calculate performance metrics
   coverage_inla <- mean(predictions_df$observed >= predictions_df$fitted_lower_inla & 
                         predictions_df$observed <= predictions_df$fitted_upper_inla, na.rm = TRUE)
-  coverage_calibrated <- mean(predictions_df$observed >= predictions_df$fitted_lower & 
-                             predictions_df$observed <= predictions_df$fitted_upper, na.rm = TRUE)
-  
+
   residuals <- predictions_df$observed - predictions_df$fitted_mean
   mae <- mean(abs(residuals), na.rm = TRUE)
   rmse <- sqrt(mean(residuals^2, na.rm = TRUE))
@@ -631,18 +638,15 @@ cat("Calculating prediction intervals from posterior samples...\n")
     na.rm = TRUE
   )
   
-  # Use calibrated coverage
-  coverage <- coverage_calibrated
-  
   cat("✓ County-level prediction intervals created:\n")
   cat("  - Method: Posterior predictive sampling (full Bayesian inference)\n")
-  cat("  - Mean interval width:", round(mean(proper_upper - proper_lower), 3), "\n")
+  cat("  - Mean interval width:", round(mean(county_upper - county_lower), 3), "\n")
   cat("  - INLA coverage:", round(coverage_inla * 100, 1), "%\n")
-  cat("  - Posterior sampling coverage:", round(coverage_calibrated * 100, 1), "%\n")
+  cat("  - Posterior sampling coverage:", round(coverage_county * 100, 1), "%\n")
   cat("  - Interval score:", round(interval_score, 3), "\n")
   
   cat("✓ Overall model performance:\n")
-  cat("  - Coverage:", round(coverage * 100, 1), "%\n")
+  cat("  - County coverage:", round(coverage_county * 100, 1), "%\n")
   cat("  - MAE:", round(mae, 3), "\n")
   cat("  - RMSE:", round(rmse, 3), "\n")
   
@@ -707,7 +711,8 @@ cat("✓ Average county coverage:", round(mean(county_fit_stats$coverage_95) * 1
 cat("--- Step 8: Creating Individual County Plots ---\n")
 
 # Create output directory
-dir.create("outputs/plots/individual_counties", showWarnings = FALSE, recursive = TRUE)
+dir.create("outputs/plots/individual_counties",
+           showWarnings = FALSE, recursive = TRUE)
 
 # Function to create individual county plot
 create_county_plot <- function(county_name, predictions_df, county_stats) {
@@ -934,7 +939,7 @@ diagnostic_summary <- data.frame(
     overall_best$model_type,
     round(overall_best$waic, 1),
     round(overall_best$dic, 1),
-    paste0(round(coverage * 100, 1), "%"),
+    paste0(round(coverage_county * 100, 1), "%"),
     paste0(round(mean(county_fit_stats$coverage_95) * 100, 1), "%"),
     round(rmse, 3),
     round(mae, 3),
@@ -978,7 +983,7 @@ report_lines <- c(
   "PREDICTION PERFORMANCE (COUNTY-LEVEL CREDIBLE INTERVALS)",
   "-" %.% 40,
   paste("INLA pooled interval coverage:", round(coverage_inla * 100, 1), "%"),
-  paste("County-specific credible interval coverage:", round(coverage_calibrated * 100, 1), "%"),
+  paste("County-specific credible interval coverage:", round(coverage_county * 100, 1), "%"),
   paste("Overall RMSE:", round(rmse, 3)),
   paste("Overall MAE:", round(mae, 3)),
   paste("Average County Coverage:", round(mean(county_fit_stats$coverage_95) * 100, 1), "%"),
@@ -986,9 +991,9 @@ report_lines <- c(
   "SAMPLE SIZE ADAPTATION SUMMARY",
   "-" %.% 40,
   paste("INLA assumes sample sizze:", nrow(train_data)),
-  paste("Correct county sample size:", "~102 time points per county"),
+  paste("Individual county sample size:", "~102 time points per county"),
   paste("Method used: Random effects uncertainty extraction"),
-  paste("Coverage improvement:", round((proper_coverage - inla_coverage) * 100, 1), "percentage points"),
+  paste("Coverage improvement:", round((coverage_county - coverage_inla) * 100, 1), "percentage points"),
   "",
   "COUNTY-LEVEL SUMMARY",
   "-" %.% 40,
@@ -1016,16 +1021,14 @@ cat("--- Step 13: Cross-Validation and Prediction Metrics ---\n")
 
 # Calculate additional prediction metrics using existing variables
 
-calibrated_coverage <- proper_coverage
-
 prediction_metrics <- list(
   mae = mae,
   rmse = rmse,
   mape = mean(abs((predictions_df$observed - predictions_df$fitted_mean) / 
                  (predictions_df$observed + 1)) * 100, na.rm = TRUE),
-  coverage_95_calibrated = calibrated_coverage,
-  coverage_95_inla = inla_coverage,
-  coverage_improvement = calibrated_coverage - inla_coverage,
+  coverage_95_county = coverage_county,
+  coverage_95_inla = coverage_inla,
+  coverage_improvement = coverage_county - coverage_inla,
   correlation = cor(predictions_df$observed, predictions_df$fitted_mean, 
                     use = "complete.obs"),
   exact_predictions = mean(round(predictions_df$fitted_mean) == predictions_df$observed, 
@@ -1038,7 +1041,7 @@ cat("✓ Final prediction metrics:\n")
 cat("  MAE:", round(prediction_metrics$mae, 3), "\n")
 cat("  RMSE:", round(prediction_metrics$rmse, 3), "\n")
 cat("  MAPE:", round(prediction_metrics$mape, 1), "%\n")
-cat("  County-specific 95% Credible Interval Coverage:", round(prediction_metrics$coverage_95_calibrated * 100, 1), "%\n")
+cat("  County-specific 95% Credible Interval Coverage:", round(prediction_metrics$coverage_95_county * 100, 1), "%\n")
 cat("  95% Credible Coverage Coverage (default from INLA):", round(prediction_metrics$coverage_95_inla * 100, 1), "%\n")
 cat("  Coverage improvement:", round(prediction_metrics$coverage_improvement * 100, 1), "percentage points\n")
 cat("  Correlation:", round(prediction_metrics$correlation, 3), "\n")
@@ -1051,19 +1054,19 @@ saveRDS(prediction_metrics,
         paste0("outputs/models/phase5_prediction_metrics_", RESPONSE_TYPE, ".rds"))
 
 # ==============================================================================
-# 14. STATE-LEVEL PREDICTIONS USING PROPER STATE MODEL CREDIBLE INTERVALS
+# 14. STATE-LEVEL PREDICTIONS USING STATE MODEL CREDIBLE INTERVALS
 # ==============================================================================
 
 cat("--- Step 14: Creating State-Level Predictions ---\n")
 
-# Aggregate training data to the state level for proper state-level modeling
+# Aggregate training data to the state level for state-level modeling
 state_training_data <- train_data %>%
   group_by(time_id, year_month, date) %>%
   summarise(
     total_count = sum(distinct_patient_count),
     total_population = sum(population),
     n_counties = n(),
-    .groups = 'drop'
+    .groups = "drop"
   ) %>%
   mutate(
     log_total_pop_offset = log(total_population),
@@ -1074,7 +1077,7 @@ state_training_data <- train_data %>%
 
 cat("Fitting separate state-level ZIP model for credible intervals...\n")
 
-# Fit state-level ZIP model (this gives us the intervals to use for state-level aggregation)
+# Fit state-level ZIP model (gives the intervals for state-level aggregation)
 state_model <- inla(
   total_count ~ time_scaled + f(time_id, model='ar1') + offset(log_total_pop_offset),
   family = CONFIG$FAMILY,
@@ -1090,8 +1093,8 @@ if (!is.null(state_model) && !is.null(state_model$summary.fitted.values)) {
   state_level_data <- state_training_data %>%
     mutate(
       fitted_mean = state_fitted_values$mean,
-      fitted_lower = state_fitted_values$`0.025quant`,  # These are correct for the state level
-      fitted_upper = state_fitted_values$`0.975quant`,  # These are correct for the state level
+      fitted_lower = state_fitted_values$`0.025quant`, # correct for state level
+      fitted_upper = state_fitted_values$`0.975quant`, # correct for state level
       observed = total_count
     )
 
@@ -1101,7 +1104,7 @@ if (!is.null(state_model) && !is.null(state_model$summary.fitted.values)) {
 
   cat("✓ State-level model fitted successfully\n")
   cat("  State WAIC:", round(state_model$waic$waic, 1), "\n")
-  cat("  Correct method for state-level intervals: Using state model's summary.fitted.values directly\n")
+  cat("  Method for state-level intervals: Using state model's summary.fitted.values directly\n")
   cat("  State-level sample size:", nrow(state_training_data), "time points\n")
   cat("  State coverage:", round(state_coverage * 100, 1), "%\n")
 
@@ -1122,7 +1125,7 @@ state_plot <- ggplot(state_level_data, aes(x = date)) +
     subtitle = paste("WV", RESPONSE_TYPE, "deaths (ZIP, WAIC =", round(state_model$waic$waic, 1), 
                     ", Coverage =", round(state_coverage * 100, 1), "%)"),
     x = "Date", y = "Total Deaths per Month",
-    caption = paste("State-level ZIP model with proper sample size (n =", nrow(state_training_data), "time points)",
+    caption = paste("State-level ZIP model with pooled sample size (n =", nrow(state_training_data), "time points)",
                    "\nBlack points = observed, Red line = model fit, Shaded area = 95% credible intervals")
   ) +
   theme_minimal() +
@@ -1138,10 +1141,10 @@ ggsave(paste0("outputs/plots/state_level_", RESPONSE_TYPE, ".png"),
        state_plot, width = 14, height = 8, dpi = 300, bg = "white")
 
 cat("✓ State-level analysis complete\n")
-cat("✓ Method: Direct state-level ZIP model with proper intervals\n")
-cat("✓ Sample size:", nrow(state_training_data), "time points (correct for state predictions)\n")
+cat("✓ Method: Direct state-level ZIP model with  intervals\n")
+cat("✓ Sample size:", nrow(state_training_data), "time points\n")
 cat("✓ Coverage:", round(state_coverage * 100, 1), "%\n")
-cat("✓ Interval source: summary.fitted.values from state model (correct usage)\n\n")
+cat("✓ Interval source: summary.fitted.values from state model\n\n")
 
 # ==============================================================================
 #  FINAL SUMMARY
@@ -1173,7 +1176,7 @@ cat("• Best model:", overall_best$model_name, "(", overall_best$phase,
 cat("• Model family: ZIP (handles", 
     round(sum(predictions_df$observed == 0) / nrow(predictions_df) * 100, 1), 
     "% zero observations)\n")
-cat("• Overall 95% coverage:", round(coverage * 100, 1), "%\n")
+cat("• Overall 95% coverage:", round(coverage_county * 100, 1), "%\n")
 cat("• Average county coverage:", round(mean(county_fit_stats$coverage_95) * 100, 1), "%\n")
 cat("• Counties with good/excellent fit:", 
     sum(county_fit_stats$fit_quality %in% c("Excellent", "Good")), 
