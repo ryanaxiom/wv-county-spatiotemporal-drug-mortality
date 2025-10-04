@@ -1,9 +1,13 @@
 # ==============================================================================
-# File 06: Executive Summary Dashboard for ZIP Models
+# File 06: Executive Summary Dashboard and Visualizations for ZIP Models
 # ==============================================================================
-# Reads Zero-Inflated Poisson models from phases 04 and 05
-# Generates executive dashboard and model comparison visualizations
-# All plots saved as phase6_*.png
+# This file creates an executive summary along
+# with model comparison visualizations
+#
+#   PHASE 6: Executive Summary Dashboard and Visualizations
+# - Reads Zero-Inflated Poisson models from phases 04 and 05
+# - Generates executive dashboard and model comparison visualizations
+# - All plots saved as phase6_*.png
 # ==============================================================================
 
 # Clear environment and load libraries
