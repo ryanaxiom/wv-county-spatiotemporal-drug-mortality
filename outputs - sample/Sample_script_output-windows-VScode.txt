@@ -1,0 +1,1089 @@
+=== PHASE 0: DATA INFRASTRUCTURE WITH K-MONTHS VALIDATION ===
+✓ Configuration saved with k-months validation framework
+
+--- Step 1: Obtaining WV County Spatial Data ---
+To enable caching of data, set `options(tigris_use_cache = TRUE)`
+in your R script or .Rprofile.
+Downloading WV county boundaries from US Census...
+Using FIPS code '54' for state 'WV'
+✓ Downloaded 55 WV counties from US Census
+
+--- Steps 2-4: Loading and Processing Drug Death Data ---
+Loaded 2381 opioid observations
+Loaded 1557 stimulant observations
+✓ Opioid complete data: 5940 observations
+✓ Stimulant complete data: 5940 observations
+
+--- Step 6: Creating Proper Validation Framework ---
+  Creating 10 validation windows for k-months ahead validation
+  Creating 10 validation windows for k-months ahead validation
+✓ Validation framework created:
+  Final evaluation - Opioid train/test: 5610 / 330 
+  Final evaluation - Stimulant train/test: 5610 / 330
+  K-months validation windows: 30
+  K-ahead values: 1, 3, 6, 12 months
+  Holdout period: 6 months (allows first 6 months of assessment period learning)
+
+--- Step 7: Creating Precision Matrices ---
+
+--- Step 8: Saving Enhanced Outputs ---
+
+=== ENHANCED DATA SETUP COMPLETE ===
+VALIDATION FRAMEWORK:
+✓ Temporal holdout: Last 6 months for final evaluation
+✓ K-months ahead: 30 validation windows
+✓ K-ahead values: 1, 3, 6, 12 months
+✓ Model family: Zero-Inflated Poisson
+✓ Zero proportions - Opioid: 0.599 | Stimulant: 0.738
+
+✓ Enhanced validation framework ready for phases 1-4
+✓ Phases use k-months validation for model selection
+✓ Final evaluation uses 6-month temporal holdout
+--- Step 1: Loading Data from Phase 0 ---
+=== PHASE 1: SPATIAL MODEL DEVELOPMENT ===
+Response variable: opioid
+Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson for zero-inflation)
+Parallel processing: TRUE
+Note: Spatial boundaries will be loaded from US Census via tigris package
+
+✓ Loaded 5940 observations for opioid analysis
+✓ Training data: 5610 observations
+✓ Test data: 330 observations
+✓ Spatial data available for 55 counties
+
+--- Step 2: Preparing Spatial Data for Modeling ---
+✓ Training data after spatial filtering: 5610 observations
+✓ Test data after spatial filtering: 330 observations
+✓ Added spatial indices to data
+
+--- Step 3: Defining Spatial Model Specifications ---
+✓ Defined 5 spatial model specifications:
+   1 . Baseline (No Spatial)
+   2 . Binary Adjacency CAR
+   3 . Exponential Distance Weights
+   4 . Gaussian Distance Weights
+   5 . Independent Spatial Effects
+
+--- Step 4: Fitting Spatial Models ---
+Fitting baseline ...
+  ✓ Completed baseline in 1.74 seconds
+Fitting adjacency ...
+  ✓ Completed adjacency in 3.44 seconds
+Fitting exponential ...
+  ✓ Completed exponential in 3.4 seconds
+Fitting gaussian ...
+  ✓ Completed gaussian in 3.39 seconds
+Fitting independent ...
+  ✓ Completed independent in 3.27 seconds
+
+✓ Successfully fit 5 out of 5 spatial models
+
+--- Step 5: Model Comparison and Diagnostics ---
+Model Comparison Results:
+   model_name      dic     waic marginal_likelihood  mean_cpo failure_rate
+1   adjacency 11221.26 11224.74           -5698.814 0.5103203  0.001604278
+2 exponential 11221.34 11224.82           -5669.691 0.5100760  0.001426025
+3    gaussian 11221.44 11224.90           -5680.503 0.5100486  0.001426025
+4 independent 11230.94 11233.46           -5685.747 0.5095610  0.001604278
+5    baseline 12575.28 12576.30           -6291.907 0.4528465  0.005882353
+   runtime fit_success waic_rank dic_rank
+1 3.444942        TRUE         1        1
+2 3.402140        TRUE         2        2
+3 3.385743        TRUE         3        3
+4 3.271138        TRUE         4        4
+5 1.740899        TRUE         5        5
+
+✓ Best spatial model: adjacency (WAIC = 11224.74 )
+
+--- Step 6: Creating Spatial Effect Visualizations ---
+Loading WV boundaries for enhanced plotting...
+Using FIPS code '54' for state 'WV'
+✓ WV boundaries loaded successfully
+✓ Created spatial effects visualization
+Creating separate plot for best model: adjacency 
+✓ Best spatial model plot saved as: phase1_best_spatial_model_ opioid .png
+Creating choropleth map for best spatial model...
+✓ Choropleth map saved as: phase1_choropleth_spatial_ opioid .png
+
+Spatial Effects Summary:
+Highest spatial effect: 1.35 in %%% County
+Lowest spatial effect: -1.106 in %%% County
+
+--- Step 7: Saving Results ---
+✓ Phase 1 results (.rds) saved
+✓ Comparison metrics CSV saved
+✓ Results saved to outputs/models/
+✓ Plots saved to outputs/plots/
+
+=== PHASE 1 COMPLETE ===
+Model family used: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+Successful spatial models: 5 / 5
+Best model: adjacency
+Best WAIC: 11224.74
+✓ Ready for Phase 2: Temporal Model Development
+=== PHASE 2: TEMPORAL MODEL DEVELOPMENT ===
+Response variable: opioid 
+Parallel processing: TRUE
+
+--- Step 1: Loading Data from Phase 0 ---
+✓ Loaded 5940 observations for opioid analysis
+✓ Training data: 5610 observations
+✓ Test data: 330 observations
+✓ Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+
+--- Step 2: Creating Temporally-Aggregated Data ---
+✓ Created temporal aggregated data
+✓ Training periods: 102 months
+✓ Test periods: 6 months
+✓ Date range: 16436 to 19692 
+
+Temporal data summary:
+Total deaths over time - Mean: 52
+
+--- Step 3: Defining Temporal Model Specifications ---
+✓ Defined 10 temporal model specifications:
+   1 . Baseline (No Temporal)
+   2 . Linear Trend
+   3 . Quadratic Trend
+   4 . Random Walk 1 (RW1)
+   5 . Random Walk 2 (RW2)
+   6 . AR(1) Correlation
+   7 . Monthly Seasonal
+   8 . RW1 + Monthly Seasonal
+   9 . Cyclic Seasonal
+   10 . Year + Month Effects
+
+--- Step 4: Fitting Temporal Models ---
+Fitting baseline ...
+  ✓ Completed baseline in 0.28 seconds
+Fitting linear_trend ...
+  ✓ Completed linear_trend in 0.29 seconds
+Fitting quadratic_trend ...
+  ✓ Completed quadratic_trend in 0.29 seconds
+Fitting rw1 ...
+  ✓ Completed rw1 in 0.4 seconds
+Fitting rw2 ...
+  ✓ Completed rw2 in 0.4 seconds
+Fitting ar1 ...
+  ✓ Completed ar1 in 0.34 seconds
+Fitting seasonal_monthly ...
+  ✓ Completed seasonal_monthly in 0.37 seconds
+Fitting seasonal_rw1 ...
+  ✓ Completed seasonal_rw1 in 0.37 seconds
+Fitting cyclic_seasonal ...
+  ✓ Completed cyclic_seasonal in 0.42 seconds
+Fitting year_month_effects ...
+  ✓ Completed year_month_effects in 0.35 seconds
+
+✓ Successfully fit 10 out of 10 temporal models
+
+--- Step 5: Model Comparison and Diagnostics ---
+Temporal Model Comparison Results:
+           model_name      dic     waic marginal_likelihood   mean_cpo
+1                 ar1 756.9404 763.0209           -413.5097 0.02622399
+2     cyclic_seasonal 759.3671 775.2182           -425.2387 0.02790354
+3                 rw1 759.6266 777.0414           -412.5105 0.02810308
+4        seasonal_rw1 759.7353 777.4392           -413.4412 0.02802580
+5                 rw2 802.1916 820.5582           -424.8123 0.03118033
+6  year_month_effects 833.6888 850.9843           -437.9827 0.03069044
+7     quadratic_trend 862.0996 866.7430           -448.2355 0.03151646
+8        linear_trend 987.2012 979.0954           -504.2728 0.02512911
+9            baseline 990.1408 980.6181           -498.9834 0.02446590
+10   seasonal_monthly 989.4244 984.7678           -499.6168 0.02439863
+   failure_rate   runtime fit_success waic_rank dic_rank
+1   0.019607843 0.3374772        TRUE         1        1
+2   0.009803922 0.4195950        TRUE         2        2
+3   0.009803922 0.3974569        TRUE         3        3
+4   0.009803922 0.3690460        TRUE         4        4
+5   0.019607843 0.3954101        TRUE         5        5
+6   0.058823529 0.3535459        TRUE         6        6
+7   0.058823529 0.2872560        TRUE         7        7
+8   0.088235294 0.2869120        TRUE         8        8
+9   0.078431373 0.2833900        TRUE         9       10
+10  0.078431373 0.3718851        TRUE        10        9
+
+✓ Best temporal model: ar1 (WAIC = 763.02 )
+
+--- Step 6: Creating Temporal Effects Visualizations ---
+✓ Created temporal visualization plots
+
+--- Step 7: Saving Results ---
+✓ Results saved to outputs/models/
+✓ Plots saved to outputs/plots/
+
+=== PHASE 2 COMPLETE ===
+Model family used: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+Successful temporal models: 10 / 10
+Best model: ar1
+Best WAIC: 763.02
+WAIC improvement: 217.6 units (lower is better)
+  Evidence strength: Very strong (>20 WAIC units)
+
+Prediction accuracy improvements (response scale):
+  Mean Absolute Error: 60.6 % better
+  Root Mean Square Error: 61.8 % better
+  Baseline MAE: 11.1 deaths/month
+  Best model MAE: 4.4 deaths/month
+
+Note: WAIC improvements are on log-likelihood scale, not directly interpretable %
+      Response-scale metrics (MAE, RMSE) show actual prediction improvements
+
+✓ Ready for Phase 2a: County Temporal Models
+=== PHASE 2a: COUNTY-LEVEL TEMPORAL MODEL DEVELOPMENT ===
+Response variable: opioid
+Parallel processing: TRUE
+
+--- Step 1: Loading Data from Previous Phases ---
+✓ Loaded 5940 observations for opioid analysis
+✓ Training data: 5610 observations
+✓ Test data: 330 observations
+✓ Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+
+--- Step 2: Preparing County-Level Temporal Data ---
+✓ Prepared county-level temporal data
+✓ Training observations: 5610 
+✓ Test observations: 330
+✓ Counties: 55
+✓ Time periods: 102
+
+County-level temporal data summary:
+Deaths per county-month - Mean: 0.99
+Zero proportion: 0.587
+
+--- Step 3: Defining County-Level Temporal Model Specifications ---
+✓ Defined 10 county-level temporal model specifications:
+   1 . Baseline (County Effects Only)
+   2 . Linear Trend (Global)
+   3 . Quadratic Trend (Global)
+   4 . RW1 (Global)
+   5 . RW2 (Global)
+   6 . AR1 (Global)
+   7 . Monthly Seasonal (Global)
+   8 . RW1 + Seasonal (Global)
+   9 . Cyclic Seasonal + RW1 (Global)
+   10 . Year + County Effects
+
+--- Step 4: Fitting County-Level Temporal Models ---
+Fitting baseline_county ... ✓ ( 3.3 s)
+Fitting linear_trend_global ... ✓ ( 3.2 s)
+Fitting quadratic_trend_global ... ✓ ( 3.3 s)
+Fitting rw1_global ... ✓ ( 2 s)
+Fitting rw2_global ... ✓ ( 2.1 s)
+Fitting ar1_global ... ✓ ( 3 s)
+Fitting seasonal_monthly_global ... ✓ ( 2 s)
+Fitting rw1_seasonal_global ... ✓ ( 3.1 s)
+Fitting cyclic_seasonal_global ... ✓ ( 2 s)
+Fitting year_county_effects ... ✓ ( 1.9 s)
+
+✓ Successfully fit 10 out of 10 county-level temporal models
+
+--- Step 5: Model Comparison and Diagnostics ---
+County-Level Temporal Model Comparison Results:
+                model_name      dic     waic marginal_likelihood  mean_cpo
+1               ar1_global 11013.43 11023.11           -5607.654 0.5126006
+2      rw1_seasonal_global 11016.68 11025.07           -5607.478 0.5127711
+3   cyclic_seasonal_global 11016.48 11025.09           -5619.297 0.5128044
+4               rw1_global 11016.70 11025.11           -5606.548 0.5127656
+5               rw2_global 11058.01 11061.99           -5618.247 0.5122551
+6      year_county_effects 11087.08 11090.20           -5629.679 0.5117540
+7   quadratic_trend_global 11112.39 11114.53           -5639.859 0.5114038
+8      linear_trend_global 11229.21 11231.95           -5691.634 0.5096537
+9  seasonal_monthly_global 11230.41 11233.10           -5686.409 0.5095379
+10         baseline_county 11230.94 11233.46           -5685.747 0.5095610
+   failure_rate  runtime fit_success waic_rank dic_rank waic_improvement
+1  0.0007130125 3.004934        TRUE         1        1      210.3461399
+2  0.0010695187 3.109450        TRUE         2        3      208.3906597
+3  0.0008912656 2.040638        TRUE         3        2      208.3715255
+4  0.0010695187 2.030089        TRUE         4        4      208.3523865
+5  0.0012477718 2.117886        TRUE         5        5      171.4689097
+6  0.0012477718 1.899880        TRUE         6        6      143.2630989
+7  0.0014260250 3.340058        TRUE         7        7      118.9306329
+8  0.0019607843 3.195333        TRUE         8        8        1.5109333
+9  0.0014260250 1.985462        TRUE         9        9        0.3656312
+10 0.0016042781 3.276627        TRUE        10       10        0.0000000
+   relative_improvement
+1                  1.87
+2                  1.86
+3                  1.85
+4                  1.85
+5                  1.53
+6                  1.28
+7                  1.06
+8                  0.01
+9                  0.00
+10                 0.00
+
+Best county-level temporal model: ar1_global (WAIC = 11023.11 )
+Models within 3 WAIC units of best:
+   1 . ar1_global (WAIC = 11023.1 )
+   2 . rw1_seasonal_global (WAIC = 11025.1 )
+   3 . cyclic_seasonal_global (WAIC = 11025.1 )
+   4 . rw1_global (WAIC = 11025.1 )
+
+--- Step 6: Creating County-Level Temporal Visualizations ---
+  Zero-inflation probability: 0.01 
+                                                               mean          sd
+zero-probability parameter for zero-inflated poisson_1  0.009967934 0.007135732
+Precision for time_id                                  17.773324663 6.154569014
+Rho for time_id                                         0.806560456 0.090123605
+Precision for county_idx                                2.461108024 0.542752132
+                                                        0.025quant     0.5quant
+zero-probability parameter for zero-inflated poisson_1 0.001468822  0.008169961
+Precision for time_id                                  8.274083113 16.910639783
+Rho for time_id                                        0.594481985  0.820947998
+Precision for county_idx                               1.552548359  2.407477972
+                                                        0.975quant        mode
+zero-probability parameter for zero-inflated poisson_1  0.02803286  0.00434245
+Precision for time_id                                  32.19093916 15.32855917
+Rho for time_id                                         0.94047827  0.85209769
+Precision for county_idx                                3.67827129  2.30903497
+  Processing ar1_global - adapting intervals...
+    County effects SD range: 0.0999 to 0.3873
+    Temporal effects SD range: 0.1229 to 0.1623
+    R-INLA pooled credible interval width: 0 
+    County-specific credible interval width: 3.43
+    Mean increased width factor: Inf x
+    Coverage (pooled intervals): 0 %
+    Coverage (county credible intervals): 98.5 %
+
+  Zero-inflation probability: 0.01
+                                                               mean
+zero-probability parameter for zero-inflated poisson_1 9.980091e-03
+Precision for time_id                                  8.853116e+01
+Precision for month                                    2.152002e+04
+Precision for county_idx                               2.460637e+00
+                                                                 sd
+zero-probability parameter for zero-inflated poisson_1 7.310732e-03
+Precision for time_id                                  3.948763e+01
+Precision for month                                    2.395904e+04
+Precision for county_idx                               5.425662e-01
+                                                         0.025quant
+zero-probability parameter for zero-inflated poisson_1 1.423182e-03
+Precision for time_id                                  3.644665e+01
+Precision for month                                    1.356182e+03
+Precision for county_idx                               1.552146e+00
+                                                           0.5quant
+zero-probability parameter for zero-inflated poisson_1 8.101436e-03
+Precision for time_id                                  8.044605e+01
+Precision for month                                    1.396144e+04
+Precision for county_idx                               2.407105e+00
+                                                         0.975quant
+zero-probability parameter for zero-inflated poisson_1 2.861165e-02
+Precision for time_id                                  1.884123e+02
+Precision for month                                    8.511129e+04
+Precision for county_idx                               3.677138e+00
+                                                               mode
+zero-probability parameter for zero-inflated poisson_1 4.200852e-03
+Precision for time_id                                  6.664816e+01
+Precision for month                                    3.657604e+03
+Precision for county_idx                               2.308942e+00
+  Processing rw1_seasonal_global - adapting intervals...
+    County effects SD range: 0.0999 to 0.3873
+    Temporal effects SD range: 0.0767 to 0.1407
+    R-INLA pooled credible interval width: 0 
+    County-specific credible interval width: 3.39
+    Mean increased width factor: Inf x
+    Coverage (pooled intervals): 0 %
+    Coverage (county credible intervals): 98.9 %
+
+  Zero-inflation probability: 0.01
+                                                               mean
+zero-probability parameter for zero-inflated poisson_1  0.009915962
+Precision for time_id                                  83.377937669
+Precision for county_idx                                2.460822382
+                                                                 sd  0.025quant
+zero-probability parameter for zero-inflated poisson_1  0.007243997  0.00141444
+Precision for time_id                                  37.194144409 34.32467205
+Precision for county_idx                                0.542845153  1.55270149
+                                                           0.5quant
+zero-probability parameter for zero-inflated poisson_1  0.008058892
+Precision for time_id                                  75.760933444
+Precision for county_idx                                2.406988387
+                                                         0.975quant
+zero-probability parameter for zero-inflated poisson_1   0.02835246
+Precision for time_id                                  177.46328285
+Precision for county_idx                                 3.67879521
+                                                               mode
+zero-probability parameter for zero-inflated poisson_1  0.004180223
+Precision for time_id                                  62.762555532
+Precision for county_idx                                2.307918973
+  Processing cyclic_seasonal_global - adapting intervals...
+    County effects SD range: 0.0999 to 0.3873
+    Temporal effects SD range: 0.0828 to 0.1462
+    R-INLA pooled credible interval width: 0 
+    County-specific credible interval width: 3.39
+    Mean increased width factor: Inf x
+    Coverage (pooled intervals): 0 %
+    Coverage (county credible intervals): 98.7 %
+
+✓ Created county-level temporal visualization plots with credible intervals
+✓ Overall coverage for best model: 98.5 %
+
+--- Step 7: Saving Results ---
+✓ Results saved to outputs/models/
+✓ Plots saved to outputs/plots/
+
+=== PHASE 2a COMPLETE ===
+Model family used: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+Successful county-level temporal models: 10 / 10
+Best county-level model: ar1_global (WAIC = 11023.11 )
+Models within 3 WAIC units: 4
+County-level prediction models ready for Phase 3 integration
+=== PHASE 3: SEPARABLE SPATIOTEMPORAL MODEL DEVELOPMENT ===
+Response variable: opioid
+Parallel processing: TRUE
+
+--- Step 1: Loading Data and Previous Results ---
+✓ Loaded data and previous phase results
+✓ Phase 1 best spatial model: adjacency 
+✓ Phase 2a best temporal model: ar1_global
+✓ Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+
+--- Step 2: Preparing Spatiotemporal Data ---
+✓ Training data: 5610 observations
+✓ Test data: 330 observations
+✓ Spatial units: 55 counties
+✓ Temporal units: 102 time periods
+
+--- Step 3: Defining Spatiotemporal Model Combinations ---
+✓ Generated 44 spatiotemporal model combinations
+Model complexity distribution:
+
+ 1  2  3  4
+ 6 13 21  4
+
+--- Step 4: Fitting Spatiotemporal Models ---
+Fitting models in parallel...
+Using 10 cores
+
+Fitting 44 models on 10 cores
+Starting 44 models...
+Completed: 44 / 44
+✓ none_linear ( 1.3 s)
+✓ none_yearly ( 2.1 s)
+✓ adjacency_none ( 2.4 s)
+✓ exponential_none ( 2.3 s)
+✓ gaussian_none ( 2.4 s)
+✓ independent_none ( 1.7 s)
+✓ none_quadratic ( 1.6 s)
+✓ none_rw1 ( 2.5 s)
+✓ none_ar1 ( 2.3 s)
+✓ none_monthly ( 1.8 s)
+✓ none_cyclic ( 1.4 s)
+✓ adjacency_linear ( 2.6 s)
+✓ adjacency_yearly ( 2.3 s)
+✓ exponential_linear ( 1.7 s)
+✓ exponential_yearly ( 1.7 s)
+✓ gaussian_linear ( 2.3 s)
+✓ gaussian_yearly ( 2.3 s)
+✓ independent_linear ( 2.1 s)
+✓ independent_yearly ( 2.5 s)
+✓ none_rw2 ( 2.7 s)
+✓ adjacency_quadratic ( 2.5 s)
+✓ adjacency_rw1 ( 2.2 s)
+✓ adjacency_ar1 ( 3 s)
+✓ adjacency_monthly ( 2.5 s)
+✓ adjacency_cyclic ( 2.3 s)
+✓ exponential_quadratic ( 2.1 s)
+✓ exponential_rw1 ( 2.9 s)
+✓ exponential_ar1 ( 2.6 s)
+✓ exponential_monthly ( 2.3 s)
+✓ exponential_cyclic ( 2.2 s)
+✓ gaussian_quadratic ( 1.3 s)
+✓ gaussian_rw1 ( 2.9 s)
+✓ gaussian_ar1 ( 2.6 s)
+✓ gaussian_monthly ( 2.3 s)
+✓ gaussian_cyclic ( 2.2 s)
+✓ independent_quadratic ( 2.6 s)
+✓ independent_rw1 ( 2.8 s)
+✓ independent_ar1 ( 2.3 s)
+✓ independent_monthly ( 2 s)
+✓ independent_cyclic ( 2.7 s)
+✓ adjacency_rw2 ( 2.8 s)
+✓ exponential_rw2 ( 2.2 s)
+✓ gaussian_rw2 ( 2.2 s)
+✓ independent_rw2 ( 1.2 s)
+
+✓ Successfully fit 44 out of 44 spatiotemporal models
+
+--- Step 5: Model Comparison with Complexity Analysis ---
+Top 10 models by WAIC:
+        model_name spatial_component temporal_component complexity_score
+1    adjacency_ar1         adjacency                ar1                3
+2  exponential_ar1       exponential                ar1                3
+3     gaussian_ar1          gaussian                ar1                3
+4    adjacency_rw1         adjacency                rw1                3
+5  exponential_rw1       exponential                rw1                3
+6     gaussian_rw1          gaussian                rw1                3
+7  independent_ar1       independent                ar1                3
+8  independent_rw1       independent                rw1                3
+9    adjacency_rw2         adjacency                rw2                4
+10 exponential_rw2       exponential                rw2                4
+       waic      dic relative_improvement  runtime
+1  11014.38 11003.66             12.44210 2.978133
+2  11014.40 11003.70             12.44191 2.550996
+3  11014.50 11003.81             12.44113 2.554787
+4  11016.22 11006.72             12.42745 2.162010
+5  11016.25 11006.77             12.42726 2.905374
+6  11016.32 11006.86             12.42666 2.893252
+7  11023.11 11013.43             12.37266 2.333131
+8  11025.11 11016.69             12.35683 2.816072
+9  11053.26 11048.29             12.13300 2.786607
+10 11053.31 11048.35             12.13260 2.225363
+
+Model selection summary:
+Best overall WAIC: adjacency_ar1 (WAIC = 11014.4 , Complexity = 3 )
+Models within 3 WAIC units (similar performance):
+   1 . adjacency_ar1 (WAIC = 11014.4 , Complexity = 3 )
+   2 . exponential_ar1 (WAIC = 11014.4 , Complexity = 3 )
+   3 . gaussian_ar1 (WAIC = 11014.5 , Complexity = 3 )
+   4 . adjacency_rw1 (WAIC = 11016.2 , Complexity = 3 )
+   5 . exponential_rw1 (WAIC = 11016.2 , Complexity = 3 )
+Best simple model (≤2 complexity): adjacency_yearly (WAIC = 11081.4 , Complexity = 2 )
+Best parsimony (complexity-adjusted): adjacency_ar1 (WAIC = 11014.4 , Complexity = 3 )
+
+Meaningful improvement analysis:
+Best temporal-only model: none_rw1 WAIC = 12417.9
+Best spatial-only model: adjacency_none WAIC = 11224.7
+Best combined model: adjacency_ar1 WAIC = 11014.4
+WAIC improvement over temporal-only: 1403.5 units
+WAIC improvement over spatial-only: 210.4 units
+
+Prediction accuracy improvements (response scale):
+  Over temporal-only - MAE: 21.7 % better, RMSE: 19.9 % better
+  Over spatial-only - MAE: 5.5 % better, RMSE: 9.4 % better
+  Actual MAE values:
+    Best combined: 0.662 deaths per county-month
+    Temporal-only: 0.845 deaths per county-month
+    Spatial-only: 0.7 deaths per county-month
+
+WAIC Evidence Strength:
+  vs. temporal-only: Very strong evidence (>20 WAIC units)
+  vs. spatial-only: Very strong evidence (>20 WAIC units)
+
+Note: WAIC improvements are on log-likelihood scale, not percentages
+      Response-scale metrics (MAE, RMSE) show actual prediction improvements
+
+--- Step 6: Creating Visualizations ---
+Data check before plotting:
+  adjacency_ar1 WAIC in comparison_metrics: 11014.38
+  Best overall WAIC: 11014.38
+  Number of unique models: 44
+✓ Created visualization plots
+
+--- Step 7: Saving Results ---
+✓ Results saved to outputs/models/
+✓ Plots saved to outputs/plots/
+
+=== PHASE 3 COMPLETE ===
+Model family used: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+Successful spatiotemporal models: 44 / 44
+Best overall model: adjacency_ar1 (WAIC = 11014.4 )
+Models within 3 WAIC units: 6 models
+Best simple model: adjacency_yearly (WAIC = 11081.4 )
+Improvement from combination: temporal  1403.5  units, spatial  210.4  units
+Ready for Phase 4: Full Spatiotemporal Interaction Models
+=== PHASE 4: FULL SPATIOTEMPORAL INTERACTION MODELS ===
+Response variable: opioid
+Loading saved results from previous phases...
+
+--- Step 1: Loading Required Data from Phase 00 ---
+✓ Loaded configuration (from Phase 00)
+✓ Loaded precision matrices
+✓ Loaded opioid splits (from Phase 00) 
+✓ Loaded Phase 3 separable results 
+✓ All required data loaded successfully
+✓ Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+✓ Holdout configuration: 6 months (from Phase 00)
+✓ Training data size: 5610 observations
+✓ Test data size: 330 observations
+✓ Holdout starts at time_id: 103
+✓ Phase 3 best model: adjacency_ar1 (WAIC = 11014.4 )
+
+--- Step 2: Preparing Interaction Data ---
+✓ Prepared interaction data structure from Phase 00 splits
+✓ Training observations: 5610
+✓ Space-time combinations: 5610
+✓ Training time range: time_id 1 to 102
+✓ Using epidemiologically-justified periods:
+  • Pre-intervention (2015-2019): Baseline epidemic patterns
+  • Implementation (2020-2022): WV Response Plan + COVID impacts
+  • Assessment (2023): Post-implementation evaluation, final 6 months for all counties are the testing set
+✓ Assessment period observations in training: 330
+✓ All epidemiologically-justified period interactions are now learnable with final 6-month holdout
+
+Dimension verification for Phase 05 compatibility:
+✓ Counties with spatial data: 55
+✓ Training data will be 5610 observations for Phase 05
+✓ This will be the size of model$summary.fitted.values
+
+--- Step 3: Defining Interaction Model Specifications ---
+✓ Defined 12 comprehensive interaction models
+Note: Extensive testing to provide stakeholder confidence in separability or interaction conclusion
+Categories: Basic interactions, time-varying spatial, seasonal, temporal variations, period-specific
+
+--- Step 4: Fitting Interaction Models ---
+Fitting interaction models in parallel...
+Using 6 cores
+
+Fitting 12 models on 6 cores
+Starting 12 models...
+Completed: 12 / 12
+✓ adjacency_ar1_interaction ( 3.9 s)
+✓ exponential_ar1_interaction ( 4.6 s)
+✓ gaussian_ar1_interaction ( 3.9 s)
+✓ adjacency_timevarying ( 603.2 s)
+✓ exponential_timevarying ( 485.8 s)
+✓ adjacency_seasonal ( 2.3 s)
+✓ exponential_seasonal ( 2.9 s)
+✓ adjacency_rw1_interaction ( 3.9 s)
+✓ adjacency_rw2_interaction ( 3.8 s)
+✓ adjacency_ar1_period ( 4.3 s)
+✓ exponential_ar1_period ( 3.5 s)
+✓ adjacency_ar1_seasonal_interaction ( 5.5 s)
+
+✓ Successfully fit 12 out of 12 interaction models
+
+--- Step 5: Comprehensive Model Comparison ---
+Comprehensive Model Comparison (Interaction + Separable):
+                           model_name  model_type complexity_score      dic
+1                adjacency_ar1_period interaction                8 10925.94
+2              exponential_ar1_period interaction                8 10927.70
+3  adjacency_ar1_seasonal_interaction interaction                6 10963.92
+4         exponential_ar1_interaction interaction                5 10964.91
+5           adjacency_ar1_interaction interaction                5 10964.86
+6           adjacency_rw1_interaction interaction                5 10967.19
+7            gaussian_ar1_interaction interaction                5 10965.07
+8           adjacency_rw2_interaction interaction                6 10986.31
+9               adjacency_timevarying interaction                6 10991.66
+10            exponential_timevarying interaction                6 10992.90
+       waic marginal_likelihood  mean_cpo failure_rate runtime_seconds
+1  10935.29           -5676.187 0.5141626 0.0007130125        4.303689
+2  10937.14           -5591.423 0.5139094 0.0007130125        3.494722
+3  10975.41           -5618.634 0.5121367 0.0005347594        5.540173
+4  10975.51           -5588.591 0.5118755 0.0005347594        4.643432
+5  10975.54           -5617.762 0.5121268 0.0005347594        3.895554
+6  10975.56           -5615.774 0.5128590 0.0005347594        3.850920
+7  10975.60           -5599.416 0.5118404 0.0005347594        3.877890
+8  10994.65           -5622.544 0.5123314 0.0005347594        3.834359
+9  11001.79           -8984.083 0.5127487 0.0007130125      603.167981
+10 11002.14           -6147.439 0.5124825 0.0007130125      485.799333
+   fit_success waic_rank improvement_over_best_separable within_3_waic
+1         TRUE         1                        79.09066          TRUE
+2         TRUE         2                        77.24211          TRUE
+3         TRUE         3                        38.96685         FALSE
+4         TRUE         4                        38.87240         FALSE
+5         TRUE         5                        38.83486         FALSE
+6         TRUE         6                        38.81985         FALSE
+7         TRUE         7                        38.78102         FALSE
+8         TRUE         8                        19.73038         FALSE
+9         TRUE         9                        12.58776         FALSE
+10        TRUE        10                        12.23912         FALSE
+
+=== MODEL SELECTION RESULTS ===
+Best overall model: adjacency_ar1_period ( interaction , WAIC = 10935.3 )
+
+Models within 3 WAIC units (similar performance):
+   1 . adjacency_ar1_period ( interaction , WAIC = 10935.3 )
+   2 . exponential_ar1_period ( interaction , WAIC = 10937.1 )
+
+=== INTERACTION vs SEPARABLE ANALYSIS ===
+Best separable (Phase 3): adjacency_ar1
+  WAIC: 11014.4
+  MAE: 0.662 deaths per county-month
+  RMSE: 1.062 deaths per county-month
+Best interaction (Phase 4): adjacency_ar1_period
+  WAIC: 10935.3
+  MAE: 0.651 deaths per county-month
+  RMSE: 1.039 deaths per county-month
+
+Improvement metrics:
+  WAIC improvement: 79.1 units ( 0.718 %)
+  MAE improvement: 1.7 % reduction in error
+  RMSE improvement: 2.2 % reduction in error
+  Runtime cost: 1.4 x longer than separable
+
+--- Step 6: Creating Visualizations ---
+✓ Created visualization plot
+
+--- Step 7: Saving Results ---
+✓ Phase 4 results saved to outputs/models/
+✓ Plots saved to outputs/plots/
+
+=== PHASE 4 FINAL RECOMMENDATION ===
+RECOMMENDATION: Consider interaction models
+• Best interaction: adjacency_ar1_period
+• Best separable (Phase 3): adjacency_ar1
+• Substantial interaction improvement: 79.1 WAIC units
+• Both models should be considered for final analysis
+
+✓ Phase 4 complete - ready for Phase 5 diagnostics
+=== PHASE 5: COMPREHENSIVE MODEL DIAGNOSTICS & COUNTY ANALYSIS ===
+Response variable: opioid
+ZIP uncertainty quantification
+
+--- Step 1: Loading All Phase Results and Data ---
+✓ Configuration
+✓ Precision matrices
+✓ Train/test splits
+✓ Phase 1 ( Spatial )
+✓ Phase 2a ( County Temporal )
+✓ Phase 3 ( Separable )
+✓ Phase 4 ( Interaction )
+✓ Loaded 4 out of 4 possible phase results
+✓ Model family: zeroinflatedpoisson1 (Zero-Inflated Poisson)
+
+--- Step 2: Extracting and Standardizing Metrics ---
+
+Processing Phase 1
+
+Processing Phase 2a 
+
+Processing Phase 3
+
+Processing Phase 4
+
+✓ Successfully extracted metrics from 4 phases
+✓ Combined 71 models from 4 phases
+
+--- Step 3: Identifying Best Models for Detailed Analysis ---
+✓ Overall best model: adjacency_ar1_period (WAIC = 10935.3 )
+✓ Best models by phase:
+   Phase 4 : adjacency_ar1_period (WAIC = 10935.3 )
+   Phase 3 : adjacency_ar1 (WAIC = 11014.4 )
+   Phase 2a : ar1_global (WAIC = 11023.1 )
+   Phase 1 : adjacency (WAIC = 11224.7 )
+✓ Models with equivalent performance (within 3 WAIC units): 2
+  These models have statistically equivalent performance:
+   1. adjacency_ar1_period (Phase 4, WAIC = 10935.3)
+   2. exponential_ar1_period (Phase 4, WAIC = 10937.1)
+
+--- Step 4: Loading Best Model for County-Level Predictions ---
+✓ Best model phase: Phase 4
+✓ Best model name: adjacency_ar1_period
+✓ Loaded model from Phase 4 interaction_results
+✓ Loaded fitted model: adjacency_ar1_period
+✓ Model class: inla
+✓ Model family: zeroinflatedpoisson1
+✓ Has fitted values: TRUE
+✓ Fitted values range: 0.027 to 13.007
+
+--- Step 5: Preparing Data ---
+✓ Loaded current data splits from Phase 00
+✓ Training data size: 5610 observations
+✓ Holdout configuration: 6 months
+✓ Recreated Phase 4 data structure exactly
+✓ Training data: 5610 observations
+✓ Counties: 55
+✓ Time points: 102
+✓ Time range: time_id 1 to 102
+✓ Date range: 16436 to 19509
+
+Period interaction verification:
+✓ Pre-intervention period observations: 3300
+✓ Implementation period observations: 1980
+✓ Assessment period observations: 330
+✓ SUCCESS: Assessment period appears in training data
+✓ Period interactions are learnable with a 6-month testing holdout
+
+Dimension verification:
+✓ Training data prepared: 5610 observations
+✓ Model fitted values: 5610 observations
+✓ SUCCESS: Dimensions match perfectly
+
+Additional verification:
+✓ Spatial counties available: 55
+✓ Counties in training data: 55
+✓ All spatial counties in training: TRUE
+
+--- Step 6: County-Level Predictions via Posterior Sampling ---
+Generating posterior samples for county prediction intervals...
+Processing posterior samples...
+  Using 8 cores (parLapply)
+  Processed 5000 samples using 8 cores
+Calculating prediction intervals from posterior samples...
+
+  Coverage analysis by count level:
+    Count =0: 100% coverage
+    Count =1: 100% coverage
+    Count =2: 98.2% coverage
+    Count =3-5: 93.7% coverage
+    Count =6-10: 95.2% coverage
+    Count =>10: 82.4% coverage
+    Zero inflation impact: 3291 zeros (58.7% have lower bound = 0)
+
+✓ Posterior predictive intervals:
+  - Method: Full posterior sampling (accounts for all correlations)
+  - Number of samples: 5000
+  - Coverage achieved: 99.1 %
+  - Mean interval width: 2.92
+✓ County-level prediction intervals created:
+  - Method: Posterior predictive sampling (full Bayesian inference)
+  - Mean interval width: 2.924 
+  - INLA coverage: 11.9 %
+  - Posterior sampling coverage: 99.1 %
+  - Interval score: 3.409
+✓ Overall model performance:
+  - County coverage: 99.1 %
+  - MAE: 0.651
+  - RMSE: 1.039
+✓ Generated predictions for 5610 observations
+✓ Model accounts for 58.7 % zero observations
+
+--- Step 7: Calculating County-Level Fit Statistics ---
+✓ Calculated fit statistics for 55 counties
+✓ Fit quality distribution:
+   Excellent 51
+   Good 4
+✓ Average county coverage: 99.1 %
+
+--- Step 8: Creating Individual County Plots ---
+✓ Creating individual plots for 55 counties...
+✓ Created 55 individual county plots
+
+--- Step 9: Creating County Grid Visualizations ---
+✓ Created 5 pages of county grids
+
+--- Step 10: Creating Spatial Visualizations ---
+Using FIPS code '54' for state 'WV'
+✓ Created comprehensive spatial analysis maps
+
+--- Step 11: Generating Performance Summary and Reports ---
+✓ Created county performance summary table
+✓ Generated diagnostic summary
+
+
+--- Step 12: Creating Comprehensive Analysis Report ---
+✓ Saved comprehensive analysis report
+
+--- Step 13: Cross-Validation and Prediction Metrics ---
+✓ Final prediction metrics:
+  MAE: 0.651
+  RMSE: 1.039
+  MAPE: 34.9 %
+  County-specific 95% Credible Interval Coverage: 99.1 %
+  95% Credible Coverage Coverage (default from INLA): 11.9 %
+  Coverage improvement: 87.2 percentage points
+  Correlation: 0.834
+  Exact predictions: 57.7 %
+  County-specific credible interval width: 2.924
+  INLA credible interval width: 0.556
+
+--- Step 14: Creating State-Level Predictions ---
+Fitting separate state-level ZIP model for credible intervals...
+✓ State-level model fitted successfully
+  State WAIC: 764 
+  Appropriate method for state-level intervals: Using state model's summary.fitted.values directly
+  State-level sample size: 102 time points
+  State coverage: 94.1 %
+✓ State-level analysis complete
+✓ Method: Direct state-level ZIP model with  intervals
+✓ Sample size: 102 time points
+✓ Coverage: 94.1 %
+✓ Interval source: summary.fitted.values from state model (appropriate for state predictions)
+
+
+=== COMPREHENSIVE DIAGNOSTICS & COUNTY ANALYSIS COMPLETE ===
+
+FILES GENERATED:
+• Individual county plots (55 files): outputs/plots/individual_counties/
+• County grid pages (5 files): outputs/plots/all_counties_grid_page*.png
+• Spatial analysis: outputs/plots/spatial_analysis_comprehensive_opioid.png
+• Performance summary: outputs/diagnostics/county_performance_summary_opioid.csv
+• Analysis report: outputs/diagnostics/comprehensive_analysis_report_opioid.txt
+• Prediction metrics: outputs/diagnostics/prediction_metrics_opioid.rds
+• State-level plot: outputs/plots/state_level_opioid.png
+
+KEY FINDINGS:
+• Best model: adjacency_ar1_period ( Phase 4 , WAIC = 10935.3 )
+• Model family: ZIP (handles 58.7 % zero observations)
+• Overall 95% coverage: 99.1 %
+• Average county coverage: 99.1 %
+• Counties with good/excellent fit: 55 out of 55
+• Mean interval width: 2.92
+
+✓ Phase 5 comprehensive diagnostics complete
+=== EXECUTIVE SUMMARY DASHBOARD FOR ZIP MODELS ===
+Response variable: opioid
+
+--- Step 1: Loading Data ---
+✓ Loaded Phase 4 model comparison CSV ( 56 )
+✓ Renamed complexity_score to complexity
+✓ Loaded Phase 05 county summary ( 55 )
+✓ Found 56 models for comparison
+
+--- Step 2: Data Preparation and Response-Scale Measurements ---
+
+Model Type Distribution:
+
+     interaction        separable single_component
+              12               32               12
+
+--- Calculating Response-Scale Improvements ---
+Loading Phase 3 and Phase 4 model objects for response-scale metrics...
+
+✔ Loaded Phase 4 results
+
+✔ Loaded Phase 3 Results
+
+Extracting fitted values:
+
+✔ Fitted values extracted successfully
+
+✔ Response-Scale Performance Metrics:
+────────────────────────────────────────
+BEST MODEL ( adjacency_ar1_period ):
+  MAE:   0.651 deaths per county-month
+  RMSE:  1.039 deaths per county-month
+  MAPE:  34.9 %
+
+MODEL COMPARISON:
+  Separable model ( adjacency_ar1 ):
+    MAE:  0.662  RMSE: 1.062
+  Interaction model ( adjacency_ar1_period ):
+    MAE:  0.651  RMSE: 1.039
+
+PERFORMANCE COMPARISON:
+  Better model:  INTERACTION
+  MAE improvement:   1.7 %
+  RMSE improvement:  2.2 %
+  County-months improved:  52.9 %
+
+OVERALL IMPROVEMENT (vs baseline):
+  MAE improvement:   43.8 %
+  RMSE improvement:  44.7 %
+────────────────────────────────────────
+
+--- WAIC Evidence Strength Interpretation ---
+WAIC improvements (log-likelihood scale):
+• Interaction vs Separable: 79.1 WAIC units
+• Best vs Baseline: 1644.2 WAIC units
+
+Evidence strength for interaction effects:
+  Level: VERY STRONG
+  Interpretation: Decisive preference for interaction model
+
+WAIC Difference Interpretation Guide:
+  <3 units: Models essentially equivalent (within noise)
+  3-7 units: Weak evidence for better model
+  7-10 units: Moderate evidence (meaningful difference)
+  10-20 units: Strong evidence (strong statistical support)
+  >20 units: Very strong/decisive evidence
+
+--- Stakeholder Summary ---
+The best model achieves:
+• Average prediction error: 0.65 deaths per county-month
+• Interaction models improve predictions in 52.9% of county-months
+• Overall improvement over baseline: 43.8 % reduction in prediction error
+
+Practical Impact:
+• Improved predictions for approximately 349 county-month combinations annually
+• This enables better resource allocation and intervention planning
+
+--- Data Preparation Complete ---
+
+
+✓ Color scheme defined for model types
+
+--- Step 5: Creating Performance vs Complexity Plot ---
+✓ Saved phase6_performance_vs_complexity.png
+
+--- Step 8: Creating Additional Analysis Plots ---
+✓ Saved additional analysis plots
+
+--- Step 9: Creating Visualizations ---
+Selected models for progression:
+  Baseline: Baseline (WAIC: 12579.5 )
+  Single Component: adjacency_none (WAIC: 11224.7 )
+  Separable: adjacency_ar1 (WAIC: 11014.4 )
+  Interaction: adjacency_ar1_period (WAIC: 10935.3 )
+
+--- Creating Model Progression Plot ---
+  Using Phase 1 baseline model
+
+Selected models for progression:
+  Baseline: baseline (WAIC: 12576.3 )
+  Single Component: adjacency_none (WAIC: 11224.7 )
+  Separable: adjacency_ar1 (WAIC: 11014.4 )
+  Interaction: adjacency_ar1_period (WAIC: 10935.3 )
+
+--- Loading Phase 1 and 2a for Single Component Fitted Values ---
+✓ Loaded Phase 1 results
+✓ Loaded Phase 2a results
+⚠ Estimated single component MAE: 0.833 
+
+--- Creating Model Progression ---
+  Total MAE improvement:  43.8 %
+✓ Saved phase6_model_progression.png
+
+Model progression plot creation complete!
+
+--- Creating Complexity Plot ---
+Highlighted models for complexity plot:
+            model_name            stage complexity     waic
+1       adjacency_none Single Component          1 11224.74
+2        adjacency_ar1        Separable          3 11014.38
+3 adjacency_ar1_period      Interaction          8 10935.29
+✓ Created and exported Complexity plot
+✓ Saved phase6_real_world_impact.png
+
+--- Step 10: Creating Final Executive Dashboard ---
+✓ Using Real-World Impact plot
+
+--- Assembling Dashboard with Plots ---
+✓ Saved phase6_executive_dashboard.png
+
+============================================================
+VISUALIZATION OUTPUTS COMPLETE
+============================================================
+
+Main Dashboard (phase6_executive_dashboard.png):
+  A: Top 15 Model Performance
+  B: Model Progression (with label boxes)
+  C: Complexity-Performance Trade-off
+  D: Real-World Impact
+
+Supplemental Plots:
+  - phase6_model_confidence.png (confidence intervals)
+  - phase6_model_progression_arrows.png (alternative version)
+  - phase6_model_progression_labels.png (used in dashboard)
+
+Best Model:  adjacency_ar1_period
+WAIC:  10,935
+Total MAE Improvement:  43.8 %
+============================================================
+
+--- Step 11: Generating CSV Files and Summary Reports ---
+✓ Saved CSV summaries
+
+--- Step 12: Generating Comprehensive Text Summary ---
+✓ Saved comprehensive text summary
+
+=== EXECUTIVE DASHBOARD GENERATION COMPLETE ===
+
+Plot files generated (outputs/plots/):
+✓ phase6_top_models_comparison.png
+✓ phase6_model_type_comparison.png
+✓ phase6_performance_vs_complexity.png
+✓ phase6_evidence_strength.png
+✓ phase6_executive_dashboard.png
+✓ phase6_waic_distribution.png
+✓ phase6_runtime_vs_performance.png
+
+CSV files generated (outputs/models/):
+✓ phase6_all_models_comparison_opioid.csv
+✓ phase6_best_models_summary_opioid.csv
+✓ phase6_improvement_summary_opioid.csv
+
+Text files generated (outputs/models/):
+✓ phase6_executive_summary_opioid.txt
+
+Key Results Summary:
+• Best ZIP Model: adjacency_ar1_period (WAIC: 10935.3 )
+• Total Improvement: 1644.2 WAIC units ( 43.8 %)
+• Evidence for Interactions: VERY STRONG
+• County-months improved: 2966
+• Model family: Zero-Inflated Poisson (optimal for zero-heavy count data)
+• County analysis:  55  counties analyzed
+
+✓ All ZIP model visualization outputs ready for stakeholders
