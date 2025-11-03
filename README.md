@@ -1,5 +1,6 @@
 # wv-county-spatiotemporal-drug-mortality
 County-level and state-level spatiotemporal analysis of opioid and stimulant mortality in West Virginia (2015-2023) using Zero-Inflated Poisson models in R-INLA
+**Code created by Ryan Hansen, Ph.D.**
 
 ## Overview
 The goal of this project was to develop a single model using the R programming language to predict both county-level and state-level death counts due to opioid and stimulant overdose in WV. This required careful consideration of model type, development, selection, and error propagation at various levels. Overall, the project was exceptionally effective in both modeling the training set and predicting the testing set with excellent Bayesian credible interval coverage (99%) for both the individual counties as well as at the state level, while properly handling the 58.7% zero-inflation in the mortality data.
